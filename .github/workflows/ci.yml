@@ -9,8 +9,7 @@ on:
 jobs:
   node:
     name: Node.js v${{ matrix.node-version }}
-    runs-on: [self-hosted, Linux, X64]
-
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [20.x, 22.x]
