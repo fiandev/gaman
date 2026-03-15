@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://gaman.7togk.id">
-    <img src="https://raw.githubusercontent.com/7TogkID/gaman/refs/heads/master/.github/images/gaman-2.png" width="100%" >
+    <img src="https://raw.githubusercontent.com/7TogkID/gaman/refs/heads/master/.github/images/gaman-3.png" width="100%" >
   </a>
 </p>
 
@@ -15,28 +15,48 @@
   <img src="https://img.shields.io/github/stars/7togkid/gaman" alt="github stars">
 </p>
 
+<p align="center">
+  <p align="center">
+  <strong>The Universal Transport Layer for Your Logic.</strong> 
+  </br></br>
+  GamanJS is not just another REST API framework. It is a <strong>Data Transport Engine</strong> that allows your business logic to travel across multiple channels—<strong>HTTP, IPC (Unix Sockets), and Message Brokers</strong>—without changing a single line of code in your controllers.
+  </p>
+</p>
+
 ---
 
-## Create a New Project
+<!-- ## Create a New Project
 
 There are two ways to scaffold a new GamanJS project:
 
 ```bash
 npm create gaman@latest
-```
+``` -->
 
-## Documentation
+<!-- ## Documentation
 
-visit our [official documentation](https://gaman.7togk.id)
+visit our [official documentation](https://gaman.7togk.id) -->
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=GamanJS%2Fgaman&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=GamanJS/gaman&type=date&theme=dark&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=GamanJS/gaman&type=date&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=GamanJS/gaman&type=date&legend=bottom-right" />
+ </picture>
+</a>
 
 ## Contributing
 
 **New Contributing welcome!** Check out our [Contributing Guide](CONTRIBUTING.md) for help getting started.
 
 ## Donate
+
 - [Saweria](https://saweria.co/angga7togkk1)
 
 ## Links
+
 - [License (MIT)](https://github.com/7togkid/gaman/blob/main/LICENSE)
 - [Official Website](https://gaman.7togk.id)
 - [Discord](https://discord.gg/CQ6fEqBe8f)
