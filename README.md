@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://gaman.7togk.id">
-    <img src="https://raw.githubusercontent.com/7TogkID/gaman/refs/heads/master/.github/images/gaman-3.png" width="100%" >
+    <img src=".github/images/gaman-new.png" width="100%" >
   </a>
 </p>
 
@@ -46,6 +46,9 @@ visit our [official documentation](https://gaman.7togk.id) -->
    <img alt="Star History Chart" src="https://api.star-history.com/image?repos=GamanJS/gaman&type=date&legend=bottom-right" />
  </picture>
 </a>
+
+## All contributors ✨
+<a href="https://github.com/GamanJS/gaman/graphs/contributors"><img width="720" src="https://contrib.rocks/image?repo=GamanJS/gaman" alt="A table of avatars from the project's contributors" /></a>
 
 ## Contributing
 

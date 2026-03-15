@@ -8,6 +8,7 @@
 		"jsx": "react-jsx",
 		"allowJs": true,
 		"types": ["bun-types"],
+		"outDir": "./dist",
 
 		// Bundler mode
 		"moduleResolution": "bundler",
@@ -27,5 +28,6 @@
 		"noUnusedParameters": false,
 		"noPropertyAccessFromIndexSignature": false
 	},
-	"include": ["./src/global.ts"]
+	"include": ["src"],
+	"exclude": ["**/*.test.ts", "tests"]
 }

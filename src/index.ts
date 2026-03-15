@@ -2,7 +2,7 @@ import './global.ts';
 
 import type { Route, Routes } from './router/index.types';
 import { composeRoutes, Router } from './router';
-import { isMiddleware, isRoutes } from './utils/is';
+import { isMiddleware } from './utils/is';
 import type { Middleware, MiddlewareHandler } from './middleware/index.types';
 import type { Context, RequestHandler } from './context/index.types';
 import { createContext } from './context';
@@ -187,7 +187,7 @@ export function Gaman() {
 					const method = req.method.toUpperCase();
 					const startTime = performance.now();
 					const ctx = await createContext(req);
-					
+
 					//! add request id to header
 					ctx.headers.set('X-Request-ID', ctx.request.id);
 
