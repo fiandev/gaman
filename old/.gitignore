@@ -1,10 +1,18 @@
 # dependencies (bun install)
 node_modules
 
+lerna-debug.log
+
 # output
 out
 dist
 *.tgz
+
+# bundle
+packages/**/*.d.ts
+packages/**/*.js
+plugins/**/*.d.ts
+plugins/**/*.js
 
 # code coverage
 coverage
@@ -32,3 +40,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# Lock files
+bun.lock

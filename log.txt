@@ -1,0 +1,31 @@
+[INFO~] [09:35:23] [mor3y3qh] [GET] /test [400 Client Err] Request processed in (11.2ms) 
+[INFO~] [09:35:25] [jqjk2vsy] [GET] /test [400 Client Err] Request processed in (1.6ms) 
+[INFO~] [09:35:29] [3qoqtcbb] [GET] /test [400 Client Err] Request processed in (0.9ms) 
+[INFO~] [09:35:51 GMT+0700 (Western Indonesia Time)] GamanJS Remake - Secure & Structured 
+[INFO~] [Sun Mar 15 202609:36:12] GamanJS Remake - Secure & Structured 
+[INFO~] [Sun Mar 15 2026:09:36:25] GamanJS Remake - Secure & Structured 
+[INFO~] [Sun Mar 15 2026:0] GamanJS Remake - Secure & Structured 
+[INFO~] [2026-03-15T02:37:23.392Z:09:37:23] GamanJS Remake - Secure & Structured 
+[INFO~] [2026-03-15T02:37:31.923Z] GamanJS Remake - Secure & Structured 
+[INFO~] [Sun Mar 15 2026 09:37:51 GMT+0700 (Western Indonesia Time):09:37:51] GamanJS Remake - Secure & Structured 
+[INFO~] [Sun Mar 15 2026 09:38:28 GMT+0700 (Western Indonesia Time):09:38:28] GamanJS Remake - Secure & Structured 
+[INFO~] [2026-03-15 09:40:40] GamanJS Remake - Secure & Structured 
+[INFO~] [2026-03-15 09:40:44] [4qcit5az] [GET] /test [400 Client Err] Request processed in (3.7ms) 
+[INFO~] [2026-03-15 09:46:22] GamanJS Remake - Secure & Structured 
+[INFO~] [2026-03-15 09:46:26] [8ttjf1vo] [GET] /test [400 Client Err] Request processed in (16.8ms) 
+[INFO~] [2026-03-15 09:46:38] GamanJS Remake - Secure & Structured 
+[INFO~] [2026-03-15 09:46:39] [07pwcmzj] [GET] /test Error: aduh apaya ini error
+    at <anonymous> (/home/angga7togk/repository/gaman/src/test.ts:4:14)
+    at <anonymous> (/home/angga7togk/repository/gaman/src/index.ts:248:21)
+    at fetch (/home/angga7togk/repository/gaman/src/index.ts:251:28) 
+[INFO~] [2026-03-15 09:46:39] [07pwcmzj] [GET] /test [400 Client Err] Request processed in (5.5ms) 
+[INFO~] [2026-03-15 09:49:50] [a8279eqv] [GET] /test Error: aduh apaya ini error
+    at <anonymous> (/home/angga7togk/repository/gaman/src/test.ts:4:14)
+    at <anonymous> (/home/angga7togk/repository/gaman/src/index.ts:248:21)
+    at fetch (/home/angga7togk/repository/gaman/src/index.ts:251:28) 
+[INFO~] [2026-03-15 09:49:50] [a8279eqv] [GET] /test [400 Client Err] Request processed in (1.0ms) 
+[INFO~] [2026-03-15 09:49:52] GamanJS Remake - Secure & Structured 
+[INFO~] [2026-03-15 09:49:54] [4232vjhc] [GET] /test [400 Client Err] Request processed in (2.9ms) 
+[INFO~] [2026-03-15 09:49:59] [pqcy8tlf] [GET] /test [400 Client Err] Request processed in (0.5ms) 
+[INFO~] [2026-03-15 09:50:15] GamanJS Remake - Secure & Structured 
+[INFO~] [2026-03-15 09:50:16] [ss8aam3v] [GET] /test [400 Client Err] Request processed in (4.7ms) 

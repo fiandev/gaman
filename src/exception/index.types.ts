@@ -1,0 +1,1 @@
+export type ExceptionHandler = (error: Error) => any;
