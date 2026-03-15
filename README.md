@@ -25,6 +25,16 @@
 
 ---
 
+## 🚦 Development Status
+
+| Protocol      | Status      | Progress          | Description                                           |
+| :------------ | :---------- | :---------------- | :---------------------------------------------------- |
+| **HTTP**      | **ACTIVE**  | `███████░░░` 70% | Full support (Routing, Middleware, Context, Cookies). |
+| **IPC**       | **ACTIVE**  | `█████░░░░░` 40%  | Unix Socket, Accumulator Buffer, Newline Protocol.    |
+| **MQ**        | **PLANNED** | `░░░░░░░░░░` 0%   | Redis/RabbitMQ Message Queue Integration.             |
+| **gRPC**      | **PLANNED** | `░░░░░░░░░░` 0%   | High-performance ProtoBuf-based communication.        |
+| **WebSocket** | **PLANNED** | `░░░░░░░░░░` 0%   | Real-time bi-directional streaming layer.             |
+
 <!-- ## Create a New Project
 
 There are two ways to scaffold a new GamanJS project:
@@ -48,6 +58,7 @@ visit our [official documentation](https://gaman.7togk.id) -->
 </a>
 
 ## All contributors ✨
+
 <a href="https://github.com/GamanJS/gaman/graphs/contributors"><img width="720" src="https://contrib.rocks/image?repo=GamanJS/gaman" alt="A table of avatars from the project's contributors" /></a>
 
 ## Contributing

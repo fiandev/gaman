@@ -4,7 +4,12 @@ import type { Route, Routes } from './router/index.types';
 import { composeRoutes, Router } from './router';
 import { isMiddleware } from './utils/is';
 import type { Middleware, MiddlewareHandler } from './middleware/index.types';
-import type { Context, RequestHandler } from './context/index.types';
+import type {
+	ContextHTTP,
+	ContextIPC,
+	RequestHandler,
+	UniversalContext,
+} from './context/index.types';
 import { createContext } from './context';
 import { Priority } from './enums';
 import { insertAndSort, sortArrayByPriority } from './utils/priority';
@@ -22,17 +27,17 @@ export interface GamanResponse<T = any> {
 	errors: any | null;
 }
 
-export function Gaman() {
+export function Gaman<UCTX extends Gaman.Context = UniversalContext>() {
 	const middlewares: Middleware[] = [];
 	const monitorMiddlewares: Array<Middleware> = [];
 
 	// ? dynamicRoutes biasanya ada parameter atau custom kek /*splat {/*splat} dll lah itu termasuk dynamic
 	// ? karna butuh validasi lebih buat nyarinya jadi kita pisahin
-	const dynamicRoutes: Array<Route> = [];
+	const dynamicRoutes: Array<Route<UCTX>> = [];
 
 	// ? staticRoutes data static saja kek path /user/setting dan method POST GET dll
 	// ? benefitnya gampang di cari proses jadi agak cepat
-	const staticRoutes = new Map<string, Map<string, Route>>();
+	const staticRoutes = new Map<string, Map<string, Route<UCTX>>>();
 
 	const pathCheckCache = new Map<string, boolean>();
 	function isDynamicPath(path: string): boolean {
@@ -62,7 +67,7 @@ export function Gaman() {
 	function findRoute(
 		path: string,
 		method: string,
-	): { route: Route | undefined; params: any } {
+	): { route: Route<UCTX> | undefined; params: any } {
 		// * 1. cek static
 		const methodsMap = staticRoutes.get(path);
 		if (methodsMap) {
@@ -99,7 +104,7 @@ export function Gaman() {
 	 */
 	async function handleResponse(
 		responder: Responder | undefined,
-		ctx?: Context,
+		ctx?: ContextHTTP,
 	) {
 		let finalResponse = responder
 			? new Response(responder.getFinalBody(), {
@@ -134,7 +139,7 @@ export function Gaman() {
 	return {
 		...Router(),
 
-		mountRouter: (rts: Routes) => {
+		mountRouter: (rts: Routes<UCTX>) => {
 			for (const route of rts) {
 				if (isDynamicPath(route.path)) {
 					dynamicRoutes.push(route);
@@ -171,7 +176,7 @@ export function Gaman() {
 
 		listen(port: number = 3431, host: string = 'localhost') {
 			// Register default routes
-			const useable_routes = composeRoutes((r) => {
+			const useable_routes = composeRoutes<UCTX>((r) => {
 				this.getRoutes().forEach((route) => r.getRoutes().push(route));
 			});
 			this.mountRouter(useable_routes);
@@ -192,7 +197,7 @@ export function Gaman() {
 					ctx.headers.set('X-Request-ID', ctx.request.id);
 
 					// ? Build Pipeline: monitor middlewares
-					const pipeline: Array<MiddlewareHandler | RequestHandler> =
+					const pipeline: Array<MiddlewareHandler | RequestHandler<UCTX>> =
 						monitorMiddlewares
 							.filter((mw) =>
 								shouldRunMiddleware(mw, ctx.request.pathname, method),
@@ -202,7 +207,7 @@ export function Gaman() {
 					Logger.setRoute(ctx.request.pathname || '/');
 					Logger.setMethod(method);
 
-					let route: Route | undefined;
+					let route: Route<UCTX> | undefined;
 					try {
 						let index = -1;
 						let done_find_route = false;
@@ -247,7 +252,7 @@ export function Gaman() {
 							}
 
 							if (!fn) return new Responder(undefined, { status: 404 });
-							return await fn(ctx, () => next(i + 1));
+							return await fn(ctx as any, () => next(i + 1));
 						};
 
 						const result = await next(0);
@@ -318,6 +323,108 @@ export function Gaman() {
 						Logger.setMethod('');
 						Logger.setStatus(null);
 					}
+				},
+			});
+		},
+
+		listenIPC(unix: string) {
+			const fs = require('node:fs');
+			if (fs.existsSync(unix)) fs.unlinkSync(unix);
+
+			const ipc_routes = composeRoutes<UCTX>((r) => {
+				this.getRoutes().forEach((route) => r.getRoutes().push(route));
+			});
+
+			this.mountRouter(ipc_routes);
+
+			Logger.info(`GamanJS IPC - Running at: ${unix}`);
+
+			//! Map untuk nampung tandon data (buffer) per socket
+			//! Pakai WeakMap biar otomatis ke-cleanup pas socket closed/garbage collected
+			const buffers = new WeakMap<Bun.Socket, string>();
+
+			Bun.listen({
+				unix,
+				socket: {
+					async data(socket, rawData) {
+						let buffer = buffers.get(socket) || '';
+						buffer += rawData.toString();
+
+						let chunkCount = 0;
+						// ... di dalam data(socket, rawData) ...
+						chunkCount++;
+						console.log(
+							`[Chunk #${chunkCount}] Nerima data sebesar: ${rawData.byteLength} bytes`,
+						);
+						
+						//! klo di akhir ada \n brrti data stream selesai
+						while (buffer.includes('\n')) {
+							const newlineIndex = buffer.indexOf('\n');
+							const rawMessage = buffer.slice(0, newlineIndex).trim();
+
+							// Simpan sisa datanya kembali ke buffer
+							buffer = buffer.slice(newlineIndex + 1);
+							buffers.set(socket, buffer);
+
+							if (!rawMessage) continue;
+
+							try {
+								
+								const payload = JSON.parse(rawMessage);
+								const { path, data } = payload;
+
+								// 3. Cari route
+								const { route, params } = findRoute(path, 'IPC');
+
+								if (!route || !route.handler) {
+									socket.write(
+										JSON.stringify({ status: 404, message: 'Not Found' }) +
+											'\n',
+									);
+									continue;
+								}
+
+								const ctx: ContextIPC = {
+									id: crypto.randomUUID(),
+									socket: socket,
+									path: path,
+									params: params,
+									data: data,
+									json: () => data,
+									send: (msg) => socket.write(JSON.stringify(msg) + '\n'),
+									reply: (msg) => {
+										socket.write(JSON.stringify(msg) + '\n');
+										socket.end();
+									},
+									close: () => socket.end(),
+									locals: {},
+								};
+
+								const result = await route.handler(ctx as any);
+
+								if (result !== undefined) {
+									socket.write(JSON.stringify(result) + '\n');
+								}
+							} catch (err: any) {
+								Logger.error(`IPC Error: ${err.message}`);
+								socket.write(
+									JSON.stringify({ status: 500, error: 'Malformed JSON' }) +
+										'\n',
+								);
+							}
+						}
+
+						buffers.set(socket, buffer);
+					},
+					open(socket) {
+						buffers.set(socket, '');
+					},
+					close(socket) {
+						buffers.delete(socket);
+					},
+					error(socket, error) {
+						Logger.error(`IPC Socket Error: ${error.message}`);
+					},
 				},
 			});
 		},

@@ -29,3 +29,23 @@
 [INFO~] [2026-03-15 09:49:59] [pqcy8tlf] [GET] /test [400 Client Err] Request processed in (0.5ms) 
 [INFO~] [2026-03-15 09:50:15] GamanJS Remake - Secure & Structured 
 [INFO~] [2026-03-15 09:50:16] [ss8aam3v] [GET] /test [400 Client Err] Request processed in (4.7ms) 
+[INFO~] [2026-03-15 12:28:46] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:29:18] GamanJS IPC - Running at: /tmp/gaman.sock 
+[ERROR] [2026-03-15 12:29:18] IPC Error: JSON Parse error: Unexpected identifier "Hai" 
+[INFO~] [2026-03-15 12:30:52] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:31:04] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:31:23] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:31:35] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:34:02] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:34:14] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:34:58] GamanJS IPC - Running at: /tmp/gaman.sock 
+[ERROR] [2026-03-15 12:34:58] IPC Error: JSON Parse error: Unterminated string 
+[INFO~] [2026-03-15 12:35:09] GamanJS IPC - Running at: /tmp/gaman.sock 
+[ERROR] [2026-03-15 12:35:09] IPC Error: JSON Parse error: Expected ']' 
+[INFO~] [2026-03-15 12:35:24] GamanJS IPC - Running at: /tmp/gaman.sock 
+[ERROR] [2026-03-15 12:35:24] IPC Error: JSON Parse error: Expected '}' 
+[INFO~] [2026-03-15 12:36:42] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:37:47] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:38:45] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:38:53] GamanJS IPC - Running at: /tmp/gaman.sock 
+[INFO~] [2026-03-15 12:39:18] GamanJS IPC - Running at: /tmp/gaman.sock 

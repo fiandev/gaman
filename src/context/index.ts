@@ -1,5 +1,5 @@
 import * as querystring from 'node:querystring';
-import type { Context, Requester } from './index.types';
+import type { ContextHTTP, Requester } from './index.types';
 import {
 	FormData,
 	FormDataEntryValue,
@@ -12,7 +12,7 @@ import { CookieMap } from 'bun';
 import { GamanHeader } from './headers';
 import { randomId } from '../utils/utils';
 
-export async function createContext(req: Request): Promise<Context> {
+export async function createContext(req: Request): Promise<ContextHTTP> {
 	const method = req.method?.toUpperCase() || 'GET';
 	const urlString = req.url || '/';
 	const url = new URL(urlString, `http://${req.headers.get('host')}`);
@@ -99,7 +99,7 @@ export async function createContext(req: Request): Promise<Context> {
 				.map((s) => s.asFile())
 				.filter((s) => s != null),
 	};
-	const ctx: Context = {
+	const ctx: ContextHTTP = {
 		locals: {},
 		url,
 		cookies: new CookieMap(req.headers.get('cookie') ?? ''),

@@ -1,9 +1,9 @@
-import type { Context } from "../context/index.types";
+import type { ContextHTTP } from "../context/index.types";
 import type { Priority } from "../enums/priority.enum";
 import type { Responder } from "../responder";
 
 export type MiddlewareHandler = (
-	ctx: Context,
+	ctx: ContextHTTP,
 	next: () => Responder | Promise<Responder>,
 ) => Responder | Promise<Responder>;
 

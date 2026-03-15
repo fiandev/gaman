@@ -1,5 +1,6 @@
-import type { RequestHandler } from "../context/index.types";
+import type { ContextHTTP, RequestHandler } from '../context/index.types';
 
 export type ControllerFactory<
-  Args extends any[] = any[]
-> = (...args: Args) => Record<string, RequestHandler>;
+	CTX extends Gaman.Context = ContextHTTP,
+	Args extends any[] = any[],
+> = (...args: Args) => Record<string, RequestHandler<CTX>>;

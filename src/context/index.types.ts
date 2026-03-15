@@ -6,7 +6,9 @@ import type { FormDataFile } from './formdata/file';
 /* -------------------------------------------------------------------------- */
 /*                                   Handler                                  */
 /* -------------------------------------------------------------------------- */
-export type RequestHandler = (c: Context) => any | Promise<any>;
+export type RequestHandler<CTX extends Gaman.Context = UniversalContext> = (
+	c: CTX,
+) => any | Promise<any>;
 
 /* -------------------------------------------------------------------------- */
 /*                                   Router                                   */
@@ -20,7 +22,7 @@ export type Query = ((name: string) => QueryValue) & Record<string, QueryValue>;
  */
 export interface Requester {
 	/**
-	 * Request Id fot debugging 
+	 * Request Id fot debugging
 	 */
 	id: string;
 	/**
@@ -140,7 +142,13 @@ export interface Requester {
 	files: (name: string) => Promise<Array<FormDataFile>>;
 }
 
-export interface Context
+export type ContextType = 'HTTP' | 'IPC';
+export type UniversalContext = ContextHTTP | ContextIPC;
+
+/* -------------------------------------------------------------------------- */
+/* Context HTTP                                */
+/* -------------------------------------------------------------------------- */
+export interface ContextHTTP
 	extends
 		Pick<
 			Requester,
@@ -166,4 +174,63 @@ export interface Context
 	get<T = any>(k: string): T;
 	has(k: string): boolean;
 	delete(k: string): void;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Context IPC                                 */
+/* -------------------------------------------------------------------------- */
+export interface ContextIPC extends Gaman.Context {
+	/**
+	 * Unique request identifier for tracing and debugging purposes.
+	 */
+	id: string;
+
+	/**
+	 * The underlying Bun Socket instance.
+	 * Provides low-level access to the connection (e.g., manual termination or metadata).
+	 */
+	socket: Bun.Socket;
+
+	/**
+	 * The resolved route path (e.g., "profile/:id").
+	 */
+	path: string;
+
+	/**
+	 * Dynamic route parameters extracted from the path.
+	 * Example: "/user/:id" with path "/user/7" results in { id: "7" }.
+	 */
+	params: Record<string, any>;
+
+	/**
+	 * The raw incoming payload delivered by the client.
+	 */
+	data: any;
+
+	/**
+	 * Utility to retrieve the request payload as a type-safe JSON object.
+	 */
+	json: <T = any>() => T;
+
+	/**
+	 * Transmits data back to the client while keeping the connection alive.
+	 * Ideal for streaming responses or partial updates.
+	 */
+	send: (data: any) => void;
+
+	/**
+	 * Sends the final response to the client and closes the connection immediately.
+	 */
+	reply: (data: any) => void;
+
+	/**
+	 * Forcibly terminates the socket connection without sending further data.
+	 */
+	close: () => void;
+
+	/**
+	 * Custom metadata storage for sharing data between middlewares and handlers.
+	 * Similar to 'locals' in Express.js.
+	 */
+	locals: Record<string, any>;
 }
