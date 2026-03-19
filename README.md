@@ -27,25 +27,63 @@
 
 ## 🚦 Development Status
 
-| Protocol      | Status      | Progress          | Description                                           |
-| :------------ | :---------- | :---------------- | :---------------------------------------------------- |
+| Protocol      | Status      | Progress         | Description                                           |
+| :------------ | :---------- | :--------------- | :---------------------------------------------------- |
 | **HTTP**      | **ACTIVE**  | `███████░░░` 70% | Full support (Routing, Middleware, Context, Cookies). |
-| **IPC**       | **ACTIVE**  | `█████░░░░░` 40%  | Unix Socket, Accumulator Buffer, Newline Protocol.    |
-| **MQ**        | **PLANNED** | `░░░░░░░░░░` 0%   | Redis/RabbitMQ Message Queue Integration.             |
-| **gRPC**      | **PLANNED** | `░░░░░░░░░░` 0%   | High-performance ProtoBuf-based communication.        |
-| **WebSocket** | **PLANNED** | `░░░░░░░░░░` 0%   | Real-time bi-directional streaming layer.             |
+| **IPC**       | **ACTIVE**  | `█████░░░░░` 40% | Unix Socket, Accumulator Buffer, Newline Protocol.    |
+| **MQ**        | **PLANNED** | `░░░░░░░░░░` 0%  | Redis/RabbitMQ Message Queue Integration.             |
+| **gRPC**      | **PLANNED** | `░░░░░░░░░░` 0%  | High-performance ProtoBuf-based communication.        |
+| **WebSocket** | **PLANNED** | `░░░░░░░░░░` 0%  | Real-time bi-directional streaming layer.             |
 
-<!-- ## Create a New Project
+## Create a New Project
+GamanJS currently only supports Bun runtime.
 
-There are two ways to scaffold a new GamanJS project:
-
+### Install
 ```bash
-npm create gaman@latest
-``` -->
+bun install gaman
+```
 
-<!-- ## Documentation
+### Quick Start
 
-visit our [official documentation](https://gaman.7togk.id) -->
+```ts
+import { Gaman, type HTTP } from "gaman";
+
+const app = Gaman<HTTP>();
+
+app.get('/', (ctx) => {
+  return ctx.send({
+    name: 'Angga7Togk'
+  })
+});
+
+app.mountServer({
+  http: 3431
+});
+```
+
+### IPC Server
+
+```ts
+import { Gaman, type IPC } from 'gaman';
+
+const gaman = Gaman<IPC>(); // you can: Gaman<HTTP | IPC>()
+
+gaman.ipc('/tmp/profile.sock', (ctx) => {
+	Log.info(ctx.json());
+	Log.info(ctx.text());
+	Log.info(ctx.body()); // raw data
+
+	return ctx.send({
+		name: 'Angga7Togk',
+	});
+});
+
+gaman.mountServer();
+```
+
+## Documentation
+
+visit our [Wiki](https://github.com/GamanJS/gaman/wiki)
 
 ## Star History
 
