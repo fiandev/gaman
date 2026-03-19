@@ -1,7 +1,6 @@
-
 /**
  * * Schema Buffer data Gaman IPC
- * 
+ *
  * ? [PAYLOAD_SIZE(4 byte) + TYPE(1 byte) + PAYLOAD(n byte)]
  */
 const HEADER_BYTE = 4; // 4 byte
@@ -47,19 +46,19 @@ export const GamanPacker = {
 	 * @param buffer
 	 * @returns
 	 */
-	decode(buffer: Buffer) {
+	decode(buffer: Buffer): [type: number, payload: any] {
 		const type = buffer.readUInt8(0);
 		const content = buffer.subarray(1);
 
 		switch (type) {
 			case 0:
-				return JSON.parse(content.toString('utf8'));
+				return [0, JSON.parse(content.toString('utf8'))];
 			case 1:
-				return content.toString('utf8');
+				return [1, content.toString('utf8')];
 			case 2:
-				return content;
+				return [2, content];
 			default:
-				return content;
+				return [2, buffer];
 		}
 	},
 
@@ -84,7 +83,7 @@ export const GamanPacker = {
 
 		state.buffer = Buffer.concat([state.buffer, rawData]);
 
-		const messages: any[] = [];
+		const messages: [type: number, payload: any][] = [];
 
 		while (true) {
 			// ? ambil payload size lewat header (4 byte) pertama
@@ -117,5 +116,22 @@ export const GamanPacker = {
 		storage.set(key, state);
 
 		return messages;
+	},
+
+	parseIPCMessage(
+		key: any,
+		rawData: Buffer,
+		storage: Map<any, { buffer: Buffer; targetSize: number | null }>,
+	) {
+		const messages = GamanPacker.feed(key, rawData, storage);
+		if (messages.length > 0) return messages;
+
+		// fallback single chunk
+		try {
+			return [GamanPacker.decode(rawData)];
+		} catch {}
+
+		// fallback raw
+		return [[1, rawData.toString('utf8')]];
 	},
 };

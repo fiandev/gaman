@@ -1,11 +1,11 @@
 import { IS_CONTROLLER } from '../contants';
-import type { ContextHTTP, ContextIPC } from '../context/index.types';
+import type { AppTransportation } from '../index.types';
 import type { ControllerFactory } from './index.types';
 
 export function composeController<
-	CTX extends Gaman.Context = ContextHTTP,
+	T extends AppTransportation,
 	Args extends any[] = any[],
->(factory: ControllerFactory<CTX, Args>): ControllerFactory<CTX, Args> {
+>(factory: ControllerFactory<T, Args>): ControllerFactory<T, Args> {
 	Object.defineProperty(factory, IS_CONTROLLER, {
 		value: true,
 		writable: false,
@@ -13,4 +13,3 @@ export function composeController<
 	});
 	return factory;
 }
-

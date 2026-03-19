@@ -1,4 +1,5 @@
 import { GamanHeader } from './context/headers';
+import type { Metadata } from './index.types';
 import { Logger } from './utils/logger';
 
 export const DEFAULT_MESSAGES: Record<number, string> = {
@@ -81,11 +82,7 @@ export interface GamanResponse<T = any> {
 	message: string;
 	data?: T;
 	errors?: Record<string, string[]>;
-	meta?: {
-		requestId?: string;
-		timestamp?: string;
-		[key: string]: any;
-	};
+	meta?: Metadata;
 }
 
 export class ViewResponse {
@@ -121,7 +118,7 @@ export interface IResponseOptions {
 	statusText?: string;
 	headers?: Record<string, string | string[]>;
 	message?: string;
-	meta?: Record<string, any>;
+	metadata?: Record<string, any>;
 }
 
 export class Responder {
@@ -145,7 +142,7 @@ export class Responder {
 		this.statusTextMessage = options.statusText || '';
 		this._message =
 			options.message ?? DEFAULT_MESSAGES[this.statusCode] ?? 'Unknown Status';
-		this._meta = options.meta || {};
+		this._meta = options.metadata || {};
 	}
 
 	/**
@@ -161,7 +158,7 @@ export class Responder {
 
 		const payload: any = {
 			success: this.statusCode >= 200 && this.statusCode < 300,
-			message: this._message,
+			message:  DEFAULT_MESSAGES[this.statusCode] ?? this._message ?? 'Unknown Status',
 		};
 
 		if (this._data !== null && this._data !== undefined) {
@@ -176,10 +173,14 @@ export class Responder {
 			payload.errors = this._errors;
 		}
 
+		payload.metadata = {
+			requestId: Logger.response.requestId, // ! Sementara langsung ambil dari Logger, karna requestId di set pertama kali ketika ada request
+			timestamp: new Date().toISOString(),
+		};
+
 		if (this._meta && Object.keys(this._meta).length > 0) {
-			payload.meta = {
-				requestId: Logger.response.requestId, // ! Sementara langsung ambil dari Logger, karna requestId di set pertama kali ketika ada request
-				timestamp: new Date().toISOString(),
+			payload.metadata = {
+				...payload.metadata,
 				...this._meta,
 			};
 		}

@@ -17,27 +17,28 @@ import { shouldRunMiddleware } from './utils/should-middleware';
 import { Responder } from './responder';
 import { IGNORED_LOG_FOR_PATH_REGEX } from './contants';
 import { Logger } from './utils/logger';
+import type {
+	AppTransportation,
+	HTTP,
+	HttpConfig,
+	IPC,
+	Metadata,
+	RunConfig,
+} from './index.types.ts';
+import { randomId } from './utils/utils.ts';
+import { GamanPacker } from './utils/gaman-packer.ts';
 
-globalThis.Res = Responder;
-globalThis.Log = Logger;
-export interface GamanResponse<T = any> {
-	status: number;
-	message: string;
-	data: T | null;
-	errors: any | null;
-}
-
-export function Gaman<UCTX extends Gaman.Context = UniversalContext>() {
+export function Gaman<T = AppTransportation>() {
 	const middlewares: Middleware[] = [];
 	const monitorMiddlewares: Array<Middleware> = [];
 
 	// ? dynamicRoutes biasanya ada parameter atau custom kek /*splat {/*splat} dll lah itu termasuk dynamic
 	// ? karna butuh validasi lebih buat nyarinya jadi kita pisahin
-	const dynamicRoutes: Array<Route<UCTX>> = [];
+	const dynamicRoutes: Array<Route<any>> = [];
 
 	// ? staticRoutes data static saja kek path /user/setting dan method POST GET dll
 	// ? benefitnya gampang di cari proses jadi agak cepat
-	const staticRoutes = new Map<string, Map<string, Route<UCTX>>>();
+	const staticRoutes = new Map<string, Map<string, Route<any>>>();
 
 	const pathCheckCache = new Map<string, boolean>();
 	function isDynamicPath(path: string): boolean {
@@ -64,10 +65,18 @@ export function Gaman<UCTX extends Gaman.Context = UniversalContext>() {
 		return result;
 	}
 
+	function findIpcRoutes() {
+		const routers: Route<IPC>[] = [];
+		for (const map of staticRoutes.values()) {
+			routers.push(...map.values().filter((r) => r.contextType === 'IPC'));
+		}
+		return routers;
+	}
+
 	function findRoute(
 		path: string,
 		method: string,
-	): { route: Route<UCTX> | undefined; params: any } {
+	): { route: Route<AppTransportation> | undefined; params: any } {
 		// * 1. cek static
 		const methodsMap = staticRoutes.get(path);
 		if (methodsMap) {
@@ -83,7 +92,9 @@ export function Gaman<UCTX extends Gaman.Context = UniversalContext>() {
 				route.methods.includes('ALL') ||
 				route.methods.includes(method.toUpperCase() as any)
 			) {
-				const result = route.match.exec(path);
+				// ! hack
+				const hackBaseUrl = 'https://gamanjs.id' + path;
+				const result = route.match.exec(hackBaseUrl);
 				if (result) {
 					return { route, params: result.pathname.groups };
 				}
@@ -104,7 +115,7 @@ export function Gaman<UCTX extends Gaman.Context = UniversalContext>() {
 	 */
 	async function handleResponse(
 		responder: Responder | undefined,
-		ctx?: ContextHTTP,
+		ctx?: ContextHTTP<HTTP>,
 	) {
 		let finalResponse = responder
 			? new Response(responder.getFinalBody(), {
@@ -136,10 +147,252 @@ export function Gaman<UCTX extends Gaman.Context = UniversalContext>() {
 		return finalResponse;
 	}
 
-	return {
-		...Router(),
+	/**
+	 * Internal logic to start the Bun HTTP server
+	 * Handles both shorthand (number) and full configuration objects.
+	 */
+	function listenHttp(http: number | HttpConfig) {
+		// 1. Normalize configuration
+		const isNumber = typeof http === 'number';
+		const port = isNumber ? http : http.port;
+		const hostname = isNumber ? 'localhost' : http.host || 'localhost';
+		const maxRequestBodySize = isNumber ? undefined : http.maxRequestBodySize;
+		const development = isNumber ? undefined : http.development;
+		const reusePort = isNumber ? undefined : http.reusePort;
 
-		mountRouter: (rts: Routes<UCTX>) => {
+		Bun.serve({
+			port,
+			hostname,
+			maxRequestBodySize,
+			development,
+			reusePort,
+			async fetch(req) {
+				const url = new URL(req.url);
+				const method = req.method.toUpperCase();
+				const startTime = performance.now();
+				const ctx = await createContext(req);
+
+				//! add request id to header
+				ctx.headers.set('X-Request-ID', ctx.request.id);
+
+				// ? Build Pipeline: monitor middlewares
+				const pipeline: Array<MiddlewareHandler | RequestHandler<HTTP>> =
+					monitorMiddlewares
+						.filter((mw) =>
+							shouldRunMiddleware(mw, ctx.request.pathname, method),
+						)
+						.map((mw) => mw.handler);
+				Logger.setRequestId(ctx.request.id);
+				Logger.setRoute(ctx.request.pathname || '/');
+				Logger.setMethod(method);
+
+				let route: Route<HTTP> | undefined;
+				try {
+					let index = -1;
+					let done_find_route = false;
+					const next = async (i: number): Promise<Responder> => {
+						if (i <= index) {
+							throw new Error('next() called multiple times');
+						}
+						index = i;
+
+						let fn = pipeline[i];
+
+						/**
+						 * ? jika next nya kosong dan `done_find_route` juga false maka saatnya nyari route
+						 * ? Karna sebelumnya kan jalanin `MONITOR_MIDDLEWARES`
+						 */
+						if (!fn && !done_find_route) {
+							done_find_route = true;
+							// ? mencari route yang cocok
+							const { route: r, params } = findRoute(url.pathname, method);
+							if (!r?.handler) {
+								return new Responder(undefined, { status: 404 });
+							}
+
+							route = r; // ! set route
+							ctx.params = params; // ! set params
+
+							// **** MIDDLEWARE ****
+							// ? filter global middlewares dari options kek includes: [] dan excludes: []
+							const activeMiddlewares = middlewares
+								.filter((mw) =>
+									shouldRunMiddleware(mw, ctx.request.pathname, method),
+								)
+								.map((m) => m.handler);
+
+							pipeline.push(
+								...activeMiddlewares, // ? middleware harus paling awal
+								// ...interceptorData.getInterceptors().map((i) => i.handler),
+								...r.pipes,
+							);
+
+							fn = pipeline[i]; // ! set ulang
+						}
+
+						if (!fn) return new Responder(undefined, { status: 404 });
+						return await fn(ctx as any, () => next(i + 1));
+					};
+
+					const result = await next(0);
+					return await handleResponse(result as Responder, ctx);
+				} catch (error: any) {
+					// ? init context on http exception
+					// if (error instanceof HttpException) {
+					// 	Object.defineProperty(error, 'context', {
+					// 		value: ctx,
+					// 		writable: true,
+					// 		configurable: true,
+					// 		enumerable: true,
+					// 	});
+					// }
+
+					// for (const runExceptionHandler of [
+					// 	...exceptionData.getExceptionHandlers(),
+					// 	...(route?.exceptions || []),
+					// ]) {
+					// 	// ? run exception handler
+					// 	const response = await runExceptionHandler(error);
+
+					// 	if (response instanceof Response) {
+					// 		// ? if exception handler have a response like: Res.json or else
+					// 		// ? so handleResponse
+					// 		return await this.handleResponse(response, res, ctx);
+					// 	}
+					// }
+
+					/**
+					 * ? Jika error adalah dari interceptor
+					 * ? maka akan di kasih default response seperti berikut
+					 * ? bisa di rewrite tinggal buat `composeExceptionHandler` aja
+					 */
+					// if (error instanceof InterceptorException) {
+					// 	return await this.handleResponse(
+					// 		Res.json(
+					// 			{
+					// 				statusCode: error.statusCode,
+					// 				message: error.message,
+					// 			},
+					// 			error.statusCode,
+					// 		),
+					// 		res,
+					// 		ctx,
+					// 	);
+					// }
+
+					Logger.error(error.message);
+					console.error(error.details);
+					return await handleResponse(
+						new Responder(undefined, { status: 500 }),
+						ctx,
+					);
+				} finally {
+					const endTime = performance.now();
+					if (
+						Logger.response.route &&
+						Logger.response.status &&
+						Logger.response.method &&
+						!IGNORED_LOG_FOR_PATH_REGEX.test(Logger.response.route)
+					) {
+						Logger.log(
+							`Request processed in §a(${(endTime - startTime).toFixed(1)}ms)§r`,
+						);
+					}
+					Logger.setRoute('');
+					Logger.setMethod('');
+					Logger.setStatus(null);
+				}
+			},
+		});
+	}
+
+	function listenIPC() {
+		for (const route of findIpcRoutes()) {
+			const ipc = route.options ?? {};
+
+			const unix = route.path;
+			const unlink = ipc.unlink ?? true;
+			const allowHalfOpen = ipc.allowHalfOpen;
+
+			// remove unix file if exists
+			if (unlink) {
+				const fs = require('node:fs');
+				if (fs.existsSync(unix)) fs.unlinkSync(unix);
+			}
+
+			// ? redirectable
+			const _path = require('node:path');
+			const absolutePath = _path.resolve(unix);
+
+			Logger.info(`§bIPC§r   : Socket active at §e${absolutePath}§r`);
+
+			const socketStorage = new Map();
+
+			Bun.listen({
+				unix,
+				allowHalfOpen,
+				socket: {
+					async data(socket, rawData) {
+						const ctx: ContextIPC = {
+							path: unix,
+							socket,
+							unix,
+							json: () => {
+								const messages = GamanPacker.parseIPCMessage(
+									socket,
+									rawData,
+									socketStorage,
+								);
+
+								for (const [type, payload] of messages) {
+									if (type === 0) return payload;
+									try {
+										return JSON.parse(payload)
+									} catch (error) {
+										
+									}
+								}
+								return undefined;
+							},
+							text: () => {
+								const messages = GamanPacker.parseIPCMessage(
+									socket,
+									rawData,
+									socketStorage,
+								);
+
+								for (const [type, payload] of messages) {
+									if (type === 1) return payload;
+								}
+								return rawData.toString('utf-8');
+							},
+							body: () => rawData,
+							send(data, byteLength, byteOffset) {
+								const response = GamanPacker.encode(data);
+								socket.write(response, byteOffset, byteLength);
+							},
+							close: () => socket.end(),
+						};
+
+						if (!route.handler) return;
+						const result = await route.handler(ctx as any);
+
+						if (result !== undefined) {
+							ctx.send(result);
+						}
+					},
+					close(socket) {
+						socketStorage.delete(socket);
+					},
+				},
+			});
+		}
+	}
+
+	return {
+		...Router<T>(),
+
+		mountRouter: (rts: Routes<T>) => {
 			for (const route of rts) {
 				if (isDynamicPath(route.path)) {
 					dynamicRoutes.push(route);
@@ -174,261 +427,34 @@ export function Gaman<UCTX extends Gaman.Context = UniversalContext>() {
 			}
 		},
 
-		listen(port: number = 3431, host: string = 'localhost') {
-			// Register default routes
-			const useable_routes = composeRoutes<UCTX>((r) => {
+		mountServer(config?: RunConfig<T>) {
+			//? initial routes Gaman() own
+			const useable_routes = composeRoutes<any>((r) => {
 				this.getRoutes().forEach((route) => r.getRoutes().push(route));
 			});
 			this.mountRouter(useable_routes);
-			Logger.info(`GamanJS Remake - Secure & Structured`);
-			// console.log(`\n🛡️  GamanJS Remake - Secure & Structured`);
-			// console.log(`🚀 Server running at: http://localhost:${port}\n`);
 
-			Bun.serve({
-				port,
-				hostname: host,
-				async fetch(req) {
-					const url = new URL(req.url);
-					const method = req.method.toUpperCase();
-					const startTime = performance.now();
-					const ctx = await createContext(req);
+			Logger.log(`§l§dGamanJS Framework v2 §r`);
+			Logger.info('§o§7The Universal Transport Layer for Your Logic.');
+			Logger.log(`§8 —————————————————————————————————————— §r`);
 
-					//! add request id to header
-					ctx.headers.set('X-Request-ID', ctx.request.id);
+			//? HTTP Server Orchestration
+			if (typeof config?.http !== 'undefined') {
+				const h =
+					typeof config.http === 'number'
+						? { port: config.http }
+						: (config.http as HttpConfig);
 
-					// ? Build Pipeline: monitor middlewares
-					const pipeline: Array<MiddlewareHandler | RequestHandler<UCTX>> =
-						monitorMiddlewares
-							.filter((mw) =>
-								shouldRunMiddleware(mw, ctx.request.pathname, method),
-							)
-							.map((mw) => mw.handler);
-					Logger.setRequestId(ctx.request.id);
-					Logger.setRoute(ctx.request.pathname || '/');
-					Logger.setMethod(method);
+				const host = h.host || 'localhost';
+				const port = h.port || 3431;
 
-					let route: Route<UCTX> | undefined;
-					try {
-						let index = -1;
-						let done_find_route = false;
-						const next = async (i: number): Promise<Responder> => {
-							if (i <= index) {
-								throw new Error('next() called multiple times');
-							}
-							index = i;
+				Logger.info(`§6HTTP§r  : Listening at §ahttp://${host}:${port}§r`);
+				listenHttp(config.http);
+			}
+			listenIPC();
 
-							let fn = pipeline[i];
-
-							/**
-							 * ? jika next nya kosong dan `done_find_route` juga false maka saatnya nyari route
-							 * ? Karna sebelumnya kan jalanin `MONITOR_MIDDLEWARES`
-							 */
-							if (!fn && !done_find_route) {
-								done_find_route = true;
-								// ? mencari route yang cocok
-								const { route: r, params } = findRoute(url.pathname, method);
-								if (!r?.handler) {
-									return new Responder(undefined, { status: 404 });
-								}
-
-								route = r; // ! set route
-								ctx.request.params = params; // ! set params
-
-								// **** MIDDLEWARE ****
-								// ? filter global middlewares dari options kek includes: [] dan excludes: []
-								const activeMiddlewares = middlewares
-									.filter((mw) =>
-										shouldRunMiddleware(mw, ctx.request.pathname, method),
-									)
-									.map((m) => m.handler);
-
-								pipeline.push(
-									...activeMiddlewares, // ? middleware harus paling awal
-									// ...interceptorData.getInterceptors().map((i) => i.handler),
-									...r.pipes,
-								);
-
-								fn = pipeline[i]; // ! set ulang
-							}
-
-							if (!fn) return new Responder(undefined, { status: 404 });
-							return await fn(ctx as any, () => next(i + 1));
-						};
-
-						const result = await next(0);
-						return await handleResponse(result as Responder, ctx);
-					} catch (error: any) {
-						// ? init context on http exception
-						// if (error instanceof HttpException) {
-						// 	Object.defineProperty(error, 'context', {
-						// 		value: ctx,
-						// 		writable: true,
-						// 		configurable: true,
-						// 		enumerable: true,
-						// 	});
-						// }
-
-						// for (const runExceptionHandler of [
-						// 	...exceptionData.getExceptionHandlers(),
-						// 	...(route?.exceptions || []),
-						// ]) {
-						// 	// ? run exception handler
-						// 	const response = await runExceptionHandler(error);
-
-						// 	if (response instanceof Response) {
-						// 		// ? if exception handler have a response like: Res.json or else
-						// 		// ? so handleResponse
-						// 		return await this.handleResponse(response, res, ctx);
-						// 	}
-						// }
-
-						/**
-						 * ? Jika error adalah dari interceptor
-						 * ? maka akan di kasih default response seperti berikut
-						 * ? bisa di rewrite tinggal buat `composeExceptionHandler` aja
-						 */
-						// if (error instanceof InterceptorException) {
-						// 	return await this.handleResponse(
-						// 		Res.json(
-						// 			{
-						// 				statusCode: error.statusCode,
-						// 				message: error.message,
-						// 			},
-						// 			error.statusCode,
-						// 		),
-						// 		res,
-						// 		ctx,
-						// 	);
-						// }
-
-						Logger.error(error.message);
-						console.error(error.details);
-						return await handleResponse(
-							new Responder(undefined, { status: 500 }),
-							ctx,
-						);
-					} finally {
-						const endTime = performance.now();
-						if (
-							Logger.response.route &&
-							Logger.response.status &&
-							Logger.response.method &&
-							!IGNORED_LOG_FOR_PATH_REGEX.test(Logger.response.route)
-						) {
-							Logger.log(
-								`Request processed in §a(${(endTime - startTime).toFixed(1)}ms)§r`,
-							);
-						}
-						Logger.setRoute('');
-						Logger.setMethod('');
-						Logger.setStatus(null);
-					}
-				},
-			});
-		},
-
-		listenIPC(unix: string) {
-			const fs = require('node:fs');
-			if (fs.existsSync(unix)) fs.unlinkSync(unix);
-
-			const ipc_routes = composeRoutes<UCTX>((r) => {
-				this.getRoutes().forEach((route) => r.getRoutes().push(route));
-			});
-
-			this.mountRouter(ipc_routes);
-
-			Logger.info(`GamanJS IPC - Running at: ${unix}`);
-
-			//! Map untuk nampung tandon data (buffer) per socket
-			//! Pakai WeakMap biar otomatis ke-cleanup pas socket closed/garbage collected
-			const buffers = new WeakMap<Bun.Socket, string>();
-
-			Bun.listen({
-				unix,
-				socket: {
-					async data(socket, rawData) {
-						let buffer = buffers.get(socket) || '';
-						buffer += rawData.toString();
-
-						let chunkCount = 0;
-						// ... di dalam data(socket, rawData) ...
-						chunkCount++;
-						console.log(
-							`[Chunk #${chunkCount}] Nerima data sebesar: ${rawData.byteLength} bytes`,
-						);
-						
-						//! klo di akhir ada \n brrti data stream selesai
-						while (buffer.includes('\n')) {
-							const newlineIndex = buffer.indexOf('\n');
-							const rawMessage = buffer.slice(0, newlineIndex).trim();
-
-							// Simpan sisa datanya kembali ke buffer
-							buffer = buffer.slice(newlineIndex + 1);
-							buffers.set(socket, buffer);
-
-							if (!rawMessage) continue;
-
-							try {
-								
-								const payload = JSON.parse(rawMessage);
-								const { path, data } = payload;
-
-								// 3. Cari route
-								const { route, params } = findRoute(path, 'IPC');
-
-								if (!route || !route.handler) {
-									socket.write(
-										JSON.stringify({ status: 404, message: 'Not Found' }) +
-											'\n',
-									);
-									continue;
-								}
-
-								const ctx: ContextIPC = {
-									id: crypto.randomUUID(),
-									socket: socket,
-									path: path,
-									params: params,
-									data: data,
-									json: () => data,
-									send: (msg) => socket.write(JSON.stringify(msg) + '\n'),
-									reply: (msg) => {
-										socket.write(JSON.stringify(msg) + '\n');
-										socket.end();
-									},
-									close: () => socket.end(),
-									locals: {},
-								};
-
-								const result = await route.handler(ctx as any);
-
-								if (result !== undefined) {
-									socket.write(JSON.stringify(result) + '\n');
-								}
-							} catch (err: any) {
-								Logger.error(`IPC Error: ${err.message}`);
-								socket.write(
-									JSON.stringify({ status: 500, error: 'Malformed JSON' }) +
-										'\n',
-								);
-							}
-						}
-
-						buffers.set(socket, buffer);
-					},
-					open(socket) {
-						buffers.set(socket, '');
-					},
-					close(socket) {
-						buffers.delete(socket);
-					},
-					error(socket, error) {
-						Logger.error(`IPC Socket Error: ${error.message}`);
-					},
-				},
-			});
+			Logger.log(`§8 —————————————————————————————————————— §r`);
+			Logger.log(`§rOrchestration complete. Ready for requests.\n`);
 		},
 	};
 }
-
-export default Gaman();

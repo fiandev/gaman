@@ -11,34 +11,26 @@ import { HTTP_REQUEST_METADATA } from '../contants';
 import { CookieMap } from 'bun';
 import { GamanHeader } from './headers';
 import { randomId } from '../utils/utils';
+import type { HTTP, Metadata } from '../index.types';
+import { Responder } from '../responder';
 
-export async function createContext(req: Request): Promise<ContextHTTP> {
+export async function createContext(req: Request): Promise<ContextHTTP<HTTP>> {
 	const method = req.method?.toUpperCase() || 'GET';
 	const urlString = req.url || '/';
 	const url = new URL(urlString, `http://${req.headers.get('host')}`);
 	const headers = new GamanHeader(req.headers);
 	const contentType = headers.get('content-type') || '';
-	
+
 	/** FormData state */
 	let form: FormData | null = null;
 	let bodyBuffer: Buffer;
 	let dataSet: Record<string, any> = {};
 
-	const gamanRequest: Requester = {
+	const gamanRequest: Requester<HTTP> = {
 		id: randomId(),
 		method,
 		url: url.href,
 		pathname: url.pathname,
-
-		header: (key: string) => headers.get(key),
-		headers: headers,
-
-		param: (name) => {
-			return gamanRequest.params[name];
-		},
-		params: Object.create(null), // ini akan di set nanti di route
-
-		query: createQuery(url.searchParams),
 
 		body: async () => {
 			if (bodyBuffer == null) {
@@ -46,12 +38,6 @@ export async function createContext(req: Request): Promise<ContextHTTP> {
 				bodyBuffer = Buffer.from(arrayBuffer);
 			}
 			return bodyBuffer;
-		},
-		text: async () => {
-			if (bodyBuffer == null) {
-				bodyBuffer = Buffer.from(await req.arrayBuffer());
-			}
-			return bodyBuffer.toString();
 		},
 		json: async <T = any>() => {
 			if (
@@ -67,6 +53,31 @@ export async function createContext(req: Request): Promise<ContextHTTP> {
 			}
 			return {} as T;
 		},
+	};
+	const ctx: ContextHTTP = {
+		url,
+		cookies: new CookieMap(req.headers.get('cookie') ?? ''),
+
+		get request() {
+			return gamanRequest;
+		},
+		header: (key: string) => headers.get(key),
+		headers: headers,
+
+		param: (name) => {
+			return ctx.params[name];
+		},
+		params: Object.create(null), // ini akan di set nanti di route
+
+		query: createQuery(url.searchParams),
+
+		text: async () => {
+			if (bodyBuffer == null) {
+				bodyBuffer = Buffer.from(await req.arrayBuffer());
+			}
+			return bodyBuffer.toString();
+		},
+
 		formData: async () => {
 			if (form !== null) return form;
 
@@ -75,7 +86,7 @@ export async function createContext(req: Request): Promise<ContextHTTP> {
 			}
 
 			if (contentType.includes('application/x-www-form-urlencoded')) {
-				const text = await gamanRequest.text();
+				const text = await ctx.text();
 				form = parseFormUrlEncoded(text);
 			} else if (contentType.includes('multipart/form-data')) {
 				const buffer = await gamanRequest.body();
@@ -86,63 +97,16 @@ export async function createContext(req: Request): Promise<ContextHTTP> {
 			return form;
 		},
 
-		input: async (name) =>
-			(await gamanRequest.formData()).get(name)?.toString() ?? null,
+		input: async (name) => (await ctx.formData()).get(name)?.toString() ?? null,
 		inputs: async (name) =>
-			((await gamanRequest.formData()).getAll(name) || [])
+			((await ctx.formData()).getAll(name) || [])
 				.map((s) => s.toString())
 				.filter((s) => s != null),
-		file: async (name) =>
-			(await gamanRequest.formData()).get(name)?.asFile() ?? null,
+		file: async (name) => (await ctx.formData()).get(name)?.asFile() ?? null,
 		files: async (name) =>
-			((await gamanRequest.formData()).getAll(name) || [])
+			((await ctx.formData()).getAll(name) || [])
 				.map((s) => s.asFile())
 				.filter((s) => s != null),
-	};
-	const ctx: ContextHTTP = {
-		locals: {},
-		url,
-		cookies: new CookieMap(req.headers.get('cookie') ?? ''),
-
-		get request() {
-			return gamanRequest;
-		},
-		get headers() {
-			return gamanRequest.headers;
-		},
-		get header() {
-			return gamanRequest.header;
-		},
-		get param() {
-			return gamanRequest.param;
-		},
-		get params() {
-			return gamanRequest.params;
-		},
-		get query() {
-			return gamanRequest.query;
-		},
-		get text() {
-			return gamanRequest.text;
-		},
-		get json() {
-			return gamanRequest.json;
-		},
-		get formData() {
-			return gamanRequest.formData;
-		},
-		get input() {
-			return gamanRequest.input;
-		},
-		get inputs() {
-			return gamanRequest.inputs;
-		},
-		get file() {
-			return gamanRequest.file;
-		},
-		get files() {
-			return gamanRequest.files;
-		},
 
 		set(k, v) {
 			dataSet[k] = v;
@@ -157,17 +121,49 @@ export async function createContext(req: Request): Promise<ContextHTTP> {
 			delete dataSet[k];
 		},
 
+		//base context
+		get path() {
+			return gamanRequest.pathname;
+		},
+
+		async metadata() {
+			const meta: Metadata = {
+				requestId: gamanRequest.id,
+			};
+
+			const json = await ctx.request.json();
+			if (json.metadata && typeof json.metadata === 'object') {
+				return {
+					...meta,
+					...json.metadata,
+				};
+			}
+			return meta;
+		},
+
+		async data() {
+			const json = await ctx.request.json();
+			if (json.data && typeof json.data === 'object') {
+				return json.data;
+			}
+			return json;
+		},
+
+		send(data, initOrStatus) {
+			return Responder.send(data, initOrStatus);
+		},
+
 		// @ts-ignore
 		[HTTP_REQUEST_METADATA]: req,
 	};
 	return ctx;
 }
 
-function createQuery(searchParams: URLSearchParams): Requester['query'] {
+function createQuery(searchParams: URLSearchParams): ContextHTTP['query'] {
 	const queryFn = ((name: string) => {
 		const all = searchParams.getAll(name);
 		return all.length > 1 ? all : (all[0] ?? '');
-	}) as Requester['query'];
+	}) as ContextHTTP['query'];
 
 	// * Copy semua entries ke dalam fungsi agar bisa diakses sebagai object
 	for (const [key, value] of searchParams.entries()) {

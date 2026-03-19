@@ -1,6 +1,7 @@
 import { normalize } from 'node:path';
 import type { Route, RouteDefinition, Routes } from './index.types';
 import type {
+	Context,
 	ContextHTTP,
 	ContextIPC,
 	ContextType,
@@ -11,23 +12,19 @@ import type { ControllerFactory } from '../controller/index.types';
 import type { Middleware, MiddlewareHandler } from '../middleware/index.types';
 import { sortArrayByPriority } from '../utils/priority';
 import { IS_ROUTES } from '../contants';
+import type { AppTransportation, HTTP, IPC } from '../index.types';
 
-export type RouterBuilder = {
-	/**
-	 * Returns all registered routes within this builder instance.
-	 */
-	getRoutes: () => Route[];
+/* -------------------------------------------------------------------------- */
+/* HTTP Routing Methods                            */
+/* -------------------------------------------------------------------------- */
 
-	/* -------------------------------------------------------------------------- */
-	/* HTTP Routing Methods                            */
-	/* -------------------------------------------------------------------------- */
-
+export type HttpRouterMethods = {
 	/**
 	 * Registers a route for the HTTP GET method.
 	 */
 	get: (
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler<HTTP> | [fn: ControllerFactory<HTTP>, name: string],
 	) => RouteDefinition;
 
 	/**
@@ -35,7 +32,7 @@ export type RouterBuilder = {
 	 */
 	post: (
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler<HTTP> | [fn: ControllerFactory<HTTP>, name: string],
 	) => RouteDefinition;
 
 	/**
@@ -43,7 +40,7 @@ export type RouterBuilder = {
 	 */
 	put: (
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler<HTTP> | [fn: ControllerFactory<HTTP>, name: string],
 	) => RouteDefinition;
 
 	/**
@@ -51,7 +48,7 @@ export type RouterBuilder = {
 	 */
 	delete: (
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler<HTTP> | [fn: ControllerFactory<HTTP>, name: string],
 	) => RouteDefinition;
 
 	/**
@@ -59,7 +56,7 @@ export type RouterBuilder = {
 	 */
 	patch: (
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler<HTTP> | [fn: ControllerFactory<HTTP>, name: string],
 	) => RouteDefinition;
 
 	/**
@@ -67,7 +64,7 @@ export type RouterBuilder = {
 	 */
 	all: (
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler<HTTP> | [fn: ControllerFactory<HTTP>, name: string],
 	) => RouteDefinition;
 
 	/**
@@ -75,7 +72,7 @@ export type RouterBuilder = {
 	 */
 	head: (
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler<HTTP> | [fn: ControllerFactory<HTTP>, name: string],
 	) => RouteDefinition;
 
 	/**
@@ -83,7 +80,7 @@ export type RouterBuilder = {
 	 */
 	options: (
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler<HTTP> | [fn: ControllerFactory<HTTP>, name: string],
 	) => RouteDefinition;
 
 	/**
@@ -92,22 +89,7 @@ export type RouterBuilder = {
 	match: (
 		methods: string[],
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
-	) => RouteDefinition;
-
-	/* -------------------------------------------------------------------------- */
-	/* IPC Routing Methods                            */
-	/* -------------------------------------------------------------------------- */
-
-	/**
-	 * Registers an IPC (Inter-Process Communication) route over Unix Domain Sockets.
-	 * This method uses ContextIPC for low-latency communication between local processes.
-	 */
-	ipc: (
-		path: string,
-		handler:
-			| RequestHandler<ContextIPC>
-			| [fn: ControllerFactory<ContextIPC>, name: string],
+		handler: RequestHandler<HTTP> | [fn: ControllerFactory<HTTP>, name: string],
 	) => RouteDefinition;
 
 	/* -------------------------------------------------------------------------- */
@@ -119,31 +101,73 @@ export type RouterBuilder = {
 	 */
 	group: (
 		groupPrefix: string,
-		callback: (r: RouterBuilder) => void,
-	) => RouteDefinition;
+		callback: (r: RouterBuilder<HTTP>) => void,
+	) => RouteDefinition<HTTP>;
 };
 
-export function Router(prefix: string = ''): RouterBuilder {
+export type IPCRouterMethods = {
+	/* -------------------------------------------------------------------------- */
+	/* IPC Routing Methods                            */
+	/* -------------------------------------------------------------------------- */
+
+	/**
+	 * Registers an IPC (Inter-Process Communication) route over Unix Domain Sockets.
+	 * This method uses ContextIPC for low-latency communication between local processes.
+	 */
+	ipc: (
+		unix: string,
+		handler: RequestHandler<IPC> | [fn: ControllerFactory<IPC>, name: string],
+	) => RouteDefinition<IPC>;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Helper to Filter Methods Based on Transportation                           */
+/* -------------------------------------------------------------------------- */
+
+// Jika T mengandung HTTP, ambil HttpRouterMethods, jika tidak kosong
+type MapHttpMethods<T = AppTransportation> = [HTTP] extends [T]
+	? HttpRouterMethods
+	: {};
+
+// Jika T mengandung IPC, ambil IPCRouterMethods, jika tidak kosong
+type MapIpcMethods<T = AppTransportation> = [IPC] extends [T]
+	? IPCRouterMethods
+	: {};
+
+export type RouterBuilder<T = AppTransportation> = MapHttpMethods<T> &
+	MapIpcMethods<T> & {
+		/**
+		 * Returns all registered routes within this builder instance.
+		 */
+		getRoutes: <TT extends AppTransportation>() => Route<TT>[];
+	};
+
+export function Router<T = AppTransportation>(
+	prefix: string = '',
+): RouterBuilder<T> {
 	const routes: Route<any>[] = [];
 
-	const addRoute = <CTX extends Gaman.Context = ContextHTTP>(
+	const addRoute = <T = AppTransportation>(
 		method: string | string[],
 		path: string,
-		handler: RequestHandler<CTX> | [fn: ControllerFactory<CTX>, name: string],
+		handler: RequestHandler<T> | [fn: ControllerFactory<T>, name: string],
 		contextType: ContextType = 'HTTP',
-	): RouteDefinition => {
-		const fullPath = normalize(`/${prefix}/${path}`).replace(/\\/g, '/');
+	): RouteDefinition<any> => {
+		const fullPath =
+			contextType == 'IPC'
+				? path
+				: normalize(`/${prefix}/${path}`).replace(/\\/g, '/');
 
-		let finalHandler: RequestHandler<CTX> | null = null;
+		let finalHandler: RequestHandler<T> | null = null;
 		if (Array.isArray(handler)) {
 			const [fn, name] = handler;
 			const instance = fn();
-			finalHandler = instance[name] as RequestHandler<CTX>;
+			finalHandler = instance[name] as RequestHandler<T>;
 		} else {
 			finalHandler = handler;
 		}
 
-		const route: Route<CTX> = {
+		const route: Route<any> = {
 			path: fullPath,
 			methods: Array.isArray(method)
 				? method.map((m) => m.toUpperCase())
@@ -154,11 +178,12 @@ export function Router(prefix: string = ''): RouterBuilder {
 			exceptions: [],
 			pipes: [],
 			match: new URLPattern({ pathname: fullPath }),
+			options: {},
 		};
 
 		routes.push(route);
 
-		const definition: RouteDefinition = {
+		const definition: RouteDefinition<any> = {
 			middleware(fn) {
 				const fns = Array.isArray(fn) ? fn : [fn];
 				route.middlewares.push(...fns);
@@ -173,6 +198,10 @@ export function Router(prefix: string = ''): RouterBuilder {
 				route.name = s;
 				return definition;
 			},
+			options(ops) {
+				route.options = ops;
+				return definition;
+			},
 		};
 
 		return definition;
@@ -182,70 +211,87 @@ export function Router(prefix: string = ''): RouterBuilder {
 		getRoutes: () => routes,
 		get: (
 			path: string,
-			handler: RequestHandler | [fn: ControllerFactory, name: string],
+			handler:
+				| RequestHandler<HTTP>
+				| [fn: ControllerFactory<HTTP>, name: string],
 		) => addRoute('GET', path, handler),
 		post: (
 			path: string,
-			handler: RequestHandler | [fn: ControllerFactory, name: string],
+			handler:
+				| RequestHandler<HTTP>
+				| [fn: ControllerFactory<HTTP>, name: string],
 		) => addRoute('POST', path, handler),
 		put: (
 			path: string,
-			handler: RequestHandler | [fn: ControllerFactory, name: string],
+			handler:
+				| RequestHandler<HTTP>
+				| [fn: ControllerFactory<HTTP>, name: string],
 		) => addRoute('PUT', path, handler),
 		delete: (
 			path: string,
-			handler: RequestHandler | [fn: ControllerFactory, name: string],
+			handler:
+				| RequestHandler<HTTP>
+				| [fn: ControllerFactory<HTTP>, name: string],
 		) => addRoute('DELETE', path, handler),
 		patch: (
 			path: string,
-			handler: RequestHandler | [fn: ControllerFactory, name: string],
+			handler:
+				| RequestHandler<HTTP>
+				| [fn: ControllerFactory<HTTP>, name: string],
 		) => addRoute('PATCH', path, handler),
 
 		all(
 			path: string,
-			handler: RequestHandler | [fn: ControllerFactory, name: string],
+			handler:
+				| RequestHandler<HTTP>
+				| [fn: ControllerFactory<HTTP>, name: string],
 		) {
 			return addRoute('ALL', path, handler);
 		},
 		head(
 			path: string,
-			handler: RequestHandler | [fn: ControllerFactory, name: string],
+			handler:
+				| RequestHandler<HTTP>
+				| [fn: ControllerFactory<HTTP>, name: string],
 		) {
 			return addRoute('HEAD', path, handler);
 		},
 		options(
 			path: string,
-			handler: RequestHandler | [fn: ControllerFactory, name: string],
+			handler:
+				| RequestHandler<HTTP>
+				| [fn: ControllerFactory<HTTP>, name: string],
 		) {
 			return addRoute('OPTIONS', path, handler);
 		},
 		match(
 			methods: string[],
 			path: string,
-			handler: RequestHandler | [fn: ControllerFactory, name: string],
+			handler:
+				| RequestHandler<HTTP>
+				| [fn: ControllerFactory<HTTP>, name: string],
 		) {
 			return addRoute(methods, path, handler);
 		},
 
 		ipc(
-			path: string,
-			handler:
-				| RequestHandler<ContextIPC>
-				| [fn: ControllerFactory<ContextIPC>, name: string],
+			unix: string,
+			handler: RequestHandler<IPC> | [fn: ControllerFactory<IPC>, name: string],
 		) {
-			return addRoute([], path, handler, 'IPC');
+			return addRoute([], unix, handler, 'IPC');
 		},
 
 		group: (
 			groupPrefix: string,
-			callback: (r: any) => void,
-		): RouteDefinition => {
-			const subBuilder = Router(normalize(`/${prefix}/${groupPrefix}`));
+			callback: (r: RouterBuilder<HTTP>) => void,
+		): RouteDefinition<HTTP> => {
+			const subBuilder = Router<HTTP>(normalize(`/${prefix}/${groupPrefix}`));
 			callback(subBuilder);
 			const childRoutes = subBuilder.getRoutes();
 			routes.push(...childRoutes);
-
-			const groupDef: RouteDefinition = {
+			
+			
+			const groupDef: RouteDefinition<HTTP> = {
 				middleware(fn) {
 					const fns = Array.isArray(fn) ? fn : [fn];
 					childRoutes.forEach((r) => r.middlewares.push(...fns));
@@ -256,15 +302,17 @@ export function Router(prefix: string = ''): RouterBuilder {
 					childRoutes.forEach((r) => r.exceptions.unshift(...ehs));
 					return groupDef;
 				},
-				name: (s: string) => groupDef,
+				name: (s: string) => groupDef
 			};
 			return groupDef;
 		},
-	};
+	} as any;
 }
 
-export function composeRoutes<UCTX extends Gaman.Context = UniversalContext>(callback: (r: RouterBuilder) => void): Routes<UCTX> {
-	const builder = Router();
+export function composeRoutes<T extends AppTransportation>(
+	callback: (r: RouterBuilder<T>) => void,
+): Routes<T> {
+	const builder = Router<T>();
 	callback(builder);
 
 	const routes = builder.getRoutes();
@@ -276,7 +324,7 @@ export function composeRoutes<UCTX extends Gaman.Context = UniversalContext>(cal
 			(mw) => mw.config.priority,
 		);
 
-		const pipes: Array<MiddlewareHandler | RequestHandler<UCTX>> = [
+		const pipes: Array<MiddlewareHandler | RequestHandler<T>> = [
 			...sortedMiddlewares.map((i) => i.handler),
 		];
 
@@ -294,5 +342,5 @@ export function composeRoutes<UCTX extends Gaman.Context = UniversalContext>(cal
 		enumerable: false,
 	});
 
-	return useable_routes as Routes<UCTX>;
+	return useable_routes as Routes<T>;
 }

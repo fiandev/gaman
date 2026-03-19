@@ -19,7 +19,6 @@ declare global {
 			PORT?: any;
 			HOST?: string;
 		}
-		interface Context {}
 	}
 }
 
