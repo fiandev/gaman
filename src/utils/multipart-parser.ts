@@ -1,5 +1,3 @@
-import { isBlank, isDefined } from './validate';
-
 export interface ParsedMultipart {
 	name: string;
 	isText: boolean;
@@ -11,94 +9,75 @@ export interface ParsedMultipart {
 }
 
 export function parseMultipart(
-	data: Buffer,
-	boundary: string,
+  data: Buffer,
+  boundary: string
 ): ParsedMultipart[] {
-	const rawData = data.toString('latin1');
-	const parts = rawData.split(`--${boundary}`).slice(1, -1);
+  const rawData = data.toString("latin1");
+  const parts = rawData.split(`--${boundary}`).slice(1, -1);
 
-	const multipart: ParsedMultipart[] = [];
+  const multipart: ParsedMultipart[] = [];
 
-	let i = 0;
-	while (i < parts.length) {
-		const part = parts[i]?.trim();
-		if (!isDefined(part)) continue;
+  let i = 0;
+  while (i < parts.length) {
+    const part = parts[i]?.trim();
+    const [rawHeaders, ...rest] = part?.split("\r\n\r\n") ?? [];
+    const body = rest.join("\r\n\r\n");
 
-		const separator = part.match(/\r?\n\r?\n/);
-		if (!separator) {
-			i++;
-			continue;
-		}
+    const headers = rawHeaders?.split("\r\n") ?? [];
 
-		const separatorIndex = part.indexOf(separator[0]);
-		const rawHeaders = part.substring(0, separatorIndex);
-		const body = part.substring(separatorIndex + separator[0].length);
+    let name = "";
+    let filename: string | undefined;
+    let contentType: string | undefined;
 
-		const headers = rawHeaders.split('\r\n');
+    let j = 0;
+    while (j < (headers?.length ?? 0)) {
+      const header = headers[j];
+      const [key, ...valueParts] = header?.split(":") ?? [];
+      const lowerKey = key?.trim().toLowerCase();
+      const value = valueParts.join(":").trim();
 
-		let name = '';
-		let filename: string | undefined;
-		let contentType: string | undefined;
+      if (lowerKey === "content-disposition") {
+        const attrs = value.split(";");
+        let k = 0;
+        while (k < attrs.length) {
+          const attr = attrs[k]?.trim();
+          const [attrKey, attrValRaw] = attr?.split("=") ?? [];
+          const attrVal = attrValRaw?.trim().replace(/^"|"$/g, "");
+          if (attrKey === "name") name = attrVal ?? "";
+          if (attrKey === "filename") filename = attrVal;
+          k++;headers?.length ?? 0
+        }
+      }
 
-		let j = 0;
-		while (j < headers.length) {
-			const header = headers[j];
-			if (!isDefined(header)) continue;
+      if (lowerKey === "content-type") {
+        contentType = value;
+      }
 
-			const [key, ...valueParts] = header.split(':');
-			if (!isDefined(key)) continue;
+      j++;
+    }
 
-			const lowerKey = key.trim().toLowerCase();
-			const value = valueParts.join(':').trim();
+		const binaryContent = new Uint8Array(Buffer.from(body, 'latin1'));
+    if (filename) {
+      multipart.push({
+        name,
+        isText: false,
+        isFile: true,
+        filename,
+        mediaType: contentType ?? "application/octet-stream",
+        content: [binaryContent],
+      });
+    } else {
+      multipart.push({
+        name,
+        isText: true,
+        isFile: false,
+        text: body,
+        content: [binaryContent]
+      });
+    }
 
-			if (lowerKey === 'content-disposition') {
-				const attrs = value.split(';');
-				let k = 0;
-				while (k < attrs.length) {
-					const attr = attrs[k]?.trim();
-					if (!isDefined(attr)) continue;
+    i++;
+  }
 
-					const [attrKey, attrValRaw] = attr.split('=');
-					const attrVal = attrValRaw?.trim().replace(/^"|"$/g, '');
-					if (!isDefined(attrVal)) continue;
-
-					if (attrKey === 'name') name = attrVal;
-					if (attrKey === 'filename') filename = attrVal;
-					k++;
-				}
-			}
-
-			if (lowerKey === 'content-type') {
-				contentType = value;
-			}
-
-			j++;
-		}
-
-		if (!isBlank(name)) {
-			const binaryContent = new Uint8Array(Buffer.from(body, 'latin1'));
-			if (filename) {
-				multipart.push({
-					name,
-					isText: false,
-					isFile: true,
-					filename,
-					mediaType: contentType ?? 'application/octet-stream',
-					content: [binaryContent],
-				});
-			} else {
-				multipart.push({
-					name,
-					isText: true,
-					isFile: false,
-					text: body,
-					content: [binaryContent],
-				});
-			}
-		}
-
-		i++;
-	}
-
-	return multipart;
+  return multipart;
 }
