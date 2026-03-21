@@ -2,83 +2,51 @@
   <img src="https://github.com/7TogkID/gaman/blob/main/.github/images/indonesia.png?raw=true" width="23px">
 </p>
 
-<p align="center">
+<div align="center">
   <a href="https://gaman.7togk.id">
-    <img src=".github/images/gaman-new.png" width="100%" >
+    <img src=".github/images/gaman_b.png" width="100%" >
   </a>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/npm/v/@gaman/core" alt="npm version">
-  <img src="https://img.shields.io/npm/dm/@gaman/core" alt="npm download">
-  <img src="https://img.shields.io/npm/l/@gaman/core" alt="npm license">
-  <img src="https://img.shields.io/github/stars/7togkid/gaman" alt="github stars">
-</p>
+</div>
 
 <p align="center">
   <p align="center">
-  <strong>The Universal Transport Layer for Your Logic.</strong> 
-  </br></br>
-  GamanJS is not just another REST API framework. It is a <strong>Data Transport Engine</strong> that allows your business logic to travel across multiple channels—<strong>HTTP, IPC (Unix Sockets), and Message Brokers</strong>—without changing a single line of code in your controllers.
-  </p>
+  <strong>A Lean Framework for Heavy-Duty Enterprise Performance.</strong> 
+  </br>
+  <i>"Complexity doesn't have to be heavy."</i>
 </p>
 
----
+<p align="center">
+  <a href="https://discord.gg/CQ6fEqBe8f">
+    <img src="https://img.shields.io/discord/1410220109347160220?label=Discord&logo=Discord" alt="Disocrd">
+  </a>
+  <a href="https://www.npmjs.com/package/gaman">
+    <img src="https://img.shields.io/npm/v/@gaman/core" alt="npm version">
+  </a>
+  <a href="https://www.npmjs.com/package/gaman">
+    <img src="https://img.shields.io/npm/dm/@gaman/core" alt="npm download">
+  </a>
+  <a href="https://github.com/gamanjs/gaman/pulse">
+    <img src="https://img.shields.io/github/commit-activity/m/gamanjs/gaman" alt="Commit Activity">
+  </a>
+  <a href="https://github.com/gamanjs/gaman/commits/v2">
+    <img src="https://img.shields.io/github/last-commit/gamanjs/gaman" alt="Commit Activity">
+  </a>
+  <a>
+    <img src="https://img.shields.io/npm/l/@gaman/core" alt="npm license">
+  </a>
+  <a>
+    <img src="https://img.shields.io/github/stars/7togkid/gaman" alt="github stars">
+  </a>
+</p>
 
-## 🚦 Development Status
-
-| Protocol      | Status      | Progress         | Description                                           |
-| :------------ | :---------- | :--------------- | :---------------------------------------------------- |
-| **HTTP**      | **ACTIVE**  | `███████░░░` 70% | Full support (Routing, Middleware, Context, Cookies). |
-| **IPC**       | **ACTIVE**  | `█████░░░░░` 40% | Unix Socket, Accumulator Buffer, Newline Protocol.    |
-| **MQ**        | **PLANNED** | `░░░░░░░░░░` 0%  | Redis/RabbitMQ Message Queue Integration.             |
-| **gRPC**      | **PLANNED** | `░░░░░░░░░░` 0%  | High-performance ProtoBuf-based communication.        |
-| **WebSocket** | **PLANNED** | `░░░░░░░░░░` 0%  | Real-time bi-directional streaming layer.             |
+<hr/>
 
 ## Create a New Project
+
 GamanJS currently only supports Bun runtime.
 
-### Install
 ```bash
-bun install gaman
-```
-
-### Quick Start
-
-```ts
-import { Gaman, type HTTP } from "gaman";
-
-const app = Gaman<HTTP>();
-
-app.get('/', (ctx) => {
-  return ctx.send({
-    name: 'Angga7Togk'
-  })
-});
-
-app.mountServer({
-  http: 3431
-});
-```
-
-### IPC Server
-
-```ts
-import { Gaman, type IPC } from 'gaman';
-
-const gaman = Gaman<IPC>(); // you can: Gaman<HTTP | IPC>()
-
-gaman.ipc('/tmp/profile.sock', (ctx) => {
-	Log.info(ctx.json());
-	Log.info(ctx.text());
-	Log.info(ctx.body()); // raw data
-
-	return ctx.send({
-		name: 'Angga7Togk',
-	});
-});
-
-gaman.mountServer();
+bun create gaman app
 ```
 
 ## Documentation
