@@ -1,4 +1,3 @@
-import { normalize } from 'node:path';
 import type { ControllerFactory } from '../compose/controller/index';
 import type {
 	RequestHandler,
@@ -6,6 +5,7 @@ import type {
 	RouteDefinition,
 	RouterBuilder,
 } from '../types';
+import { normalizePath } from '../utils/utils';
 
 export function Router(prefix: string = ''): RouterBuilder {
 	const routes: Route[] = [];
@@ -24,7 +24,7 @@ export function Router(prefix: string = ''): RouterBuilder {
 			finalHandler = handler;
 		}
 
-		const fullPath = normalize(`/${prefix}/${path}`);
+		const fullPath = normalizePath(`/${prefix}/${path}`);
 		const methods = Array.isArray(method)
 			? method.map((m) => m.toUpperCase())
 			: [method.toUpperCase()];
@@ -73,7 +73,7 @@ export function Router(prefix: string = ''): RouterBuilder {
 
 		group: (groupPrefix, callback) => {
 			// Rekursi Router dengan prefix baru
-			const subBuilder = Router(normalize(`/${prefix}/${groupPrefix}`));
+			const subBuilder = Router(normalizePath(`/${prefix}/${groupPrefix}`));
 			callback(subBuilder);
 
 			const childRoutes = subBuilder.getRoutes();
