@@ -3,7 +3,7 @@ import { detectMime } from '../../../utils/mime';
 /**
  * GamanJS-compatible File class, extending Blob
  */
-export class FormDataFile extends Blob {
+export class GFile extends Blob {
 	filename: string;
 	lastModified: number;
 	private _type: string;
@@ -86,7 +86,7 @@ export class FormDataFile extends Blob {
 		const name = `${prefix}${Date.now()}_${this.filename}`;
 		const fullPath = join(tmpdir(), name);
 
-		await Bun.write(fullPath, this); // Jauh lebih cepat
+		await Bun.write(fullPath, this);
 		return fullPath;
 	}
 

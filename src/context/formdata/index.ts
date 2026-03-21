@@ -1,113 +1,142 @@
-import { FormDataFile } from './file';
-
-/**
- * * ini untuk schema buat inputan aja kek buat sistem gaman ngeset data form
- * * contoh: form.set(key, {value}); biar enak
- * * nanti ujung ujungnya tetep jadi class FormDataEntryValue
- */
-export interface IFormDataEntryValue {
-	name: string;
-	value: string | FormDataFile | undefined;
-}
+import type { PartAddress } from '../../utils/multipart-scanner';
+import { GFile } from './file';
 
 /**
  * * Data Real
  */
-export class FormDataEntryValue implements IFormDataEntryValue {
-	constructor(
-		public name: string,
-		public value: string | FormDataFile | undefined,
-	) {}
-	public getName(): string {
-		return this.name;
-	}
-
-	public isFile(): this is File {
-		return this.value instanceof File;
-	}
-
-	public toString(): string {
-		if (typeof this.value === 'string') return this.value;
-		if (typeof this.value === 'number') return String(this.value);
-		return '[object File]';
-	}
-
-	[Symbol.toPrimitive](hint: string) {
-		if (hint === 'string') return this.toString();
-		if (hint === 'number') return Number(this.value);
-		return this.toString();
-	}
-
-	public asString(): string | null {
-		if (typeof this.value === 'string') return this.value;
-		return null;
-	}
-
-	public asFile(): FormDataFile | null {
-		if (this.value instanceof FormDataFile) return this.value;
-		return null;
-	}
-
-	public asNumber(): number {
-		if (typeof this.value == 'number') return this.value;
-		return Number(this.value);
-	}
-}
+export type FormDataEntryValue = string | number | GFile;
 
 export class FormData {
 	private fields: Map<string, FormDataEntryValue[]> = new Map();
+	private isFullyParsed = false;
 
-	delete(name: string): void {
-		this.fields.delete(name);
+	constructor(
+		private body?: Buffer,
+		private addresses?: PartAddress[],
+	) {
+		if (!addresses || addresses.length === 0) {
+			this.isFullyParsed = true;
+		}
+	}
+
+	/**
+	 * @ID
+	 * GamanJS memakai lazyParse by name from FormData
+	 * jadi penggunaan ram lebih sedikit, dan data tidak akan di load semua katika ada request
+	 */
+	private lazyParse(name: string): void {
+		if (!(this.addresses && this.body)) return;
+		if (this.isFullyParsed || this.fields.has(name)) return;
+
+		// Cari di addresses yang belum dipindahkan ke fields
+		const matchingAddresses = this.addresses.filter(
+			(addr) => addr.name === name,
+		);
+
+		for (const addr of matchingAddresses) {
+			const partBuffer = this.body.subarray(addr.start, addr.end); // Zero-copy
+
+			let entryValue: FormDataEntryValue;
+
+			if (addr.filename) {
+				entryValue = new GFile(addr.filename, partBuffer, {
+					type: addr.contentType,
+				});
+			} else if (!isNaN(Number((entryValue = partBuffer.toString())))) {
+				entryValue = Number(entryValue);
+			}
+
+			this.internalAppend(addr.name, entryValue);
+		}
+
+		//! Hapus addresses yang sudah di-parse agar tidak double loop nantinya
+		this.addresses = this.addresses.filter((addr) => addr.name !== name);
+	}
+
+	private parseAll(): void {
+		if (!(this.addresses && this.body)) return;
+		if (this.isFullyParsed) return;
+
+		for (const addr of this.addresses) {
+			const partBuffer = this.body.subarray(addr.start, addr.end);
+			let entryValue: FormDataEntryValue;
+
+			if (addr.filename) {
+				entryValue = new GFile(addr.filename, partBuffer, {
+					type: addr.contentType,
+				});
+			} else if (!isNaN(Number((entryValue = partBuffer.toString())))) {
+				entryValue = Number(entryValue);
+			}
+
+			this.internalAppend(addr.name, entryValue);
+		}
+		this.addresses = [];
+		this.isFullyParsed = true;
+	}
+
+	private internalAppend(name: string, value: FormDataEntryValue) {
+		const existing = this.fields.get(name);
+		if (existing) {
+			existing.push(value);
+		} else {
+			this.fields.set(name, [value]);
+		}
 	}
 
 	get(name: string): FormDataEntryValue | null {
+		this.lazyParse(name);
 		const values = this.fields.get(name);
 		return values ? values[0] || null : null;
 	}
 
 	getAll(name: string): FormDataEntryValue[] {
+		this.lazyParse(name);
 		return this.fields.get(name) || [];
 	}
 
 	has(name: string): boolean {
+		this.lazyParse(name);
 		return this.fields.has(name);
 	}
 
-	set(name: string, value: IFormDataEntryValue) {
-		const _newValue = new FormDataEntryValue(value.name, value.value);
-		if (this.has(name)) {
-			const values = this.fields.get(name)!;
-			values.push(_newValue);
-		} else {
-			this.fields.set(name, [_newValue]);
-		}
+	set(name: string, value: FormDataEntryValue) {
+		this.fields.set(name, [value]);
 	}
 
-	setAll(name: string, values: IFormDataEntryValue[]) {
-		const _newValues: FormDataEntryValue[] = values.map(
-			(value) => new FormDataEntryValue(value.name, value.value),
-		);
-		this.fields.set(name, _newValues);
+	setAll(name: string, values: FormDataEntryValue[]) {
+		this.fields.set(name, values);
 	}
 
+	// Methods yang butuh iterasi semua data
 	entries(): IterableIterator<[string, FormDataEntryValue]> {
-		const flattenedEntries: [string, FormDataEntryValue][] = [];
+		this.parseAll();
+		const flattened: [string, FormDataEntryValue][] = [];
 		for (const [name, values] of this.fields.entries()) {
-			values.forEach((value) => flattenedEntries.push([name, value]));
+			values.forEach((v) => flattened.push([name, v]));
 		}
-		return flattenedEntries[Symbol.iterator]();
+		return flattened[Symbol.iterator]();
 	}
 
 	keys(): IterableIterator<string> {
+		this.parseAll();
 		return this.fields.keys();
 	}
 
 	values(): IterableIterator<FormDataEntryValue> {
-		const flattenedValues: FormDataEntryValue[] = [];
+		this.parseAll();
+		const flattened: FormDataEntryValue[] = [];
 		for (const values of this.fields.values()) {
-			flattenedValues.push(...values);
+			flattened.push(...values);
 		}
-		return flattenedValues[Symbol.iterator]();
+		return flattened[Symbol.iterator]();
+	}
+
+	delete(name: string): void {
+		this.lazyParse(name);
+		this.fields.delete(name);
+
+		if (!this.addresses) return;
+		this.addresses = this.addresses.filter((addr) => addr.name !== name);
 	}
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'bun:test';
 import * as fs from 'fs';
 import { parseMultipart } from './multipart-parser';
-import { FormDataFile } from '../context/formdata/file';
+import { GFile } from '../context/formdata/file';
 
 // multipart.ts
 type FilePart = {
@@ -105,7 +105,7 @@ describe('Multipart Parser Benchmark', async () => {
 
 		if (avatar) {
 			// Gunakan instance FormDataFile kamu
-			const saver = new FormDataFile(avatar.filename!, avatar.content);
+			const saver = new GFile(avatar.filename!, avatar.content);
 			await saver.saveTo('./test_output.png');
 
 			// Verifikasi file ada

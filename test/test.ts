@@ -2,14 +2,13 @@ import { composeRouter } from '../src/compose';
 import { defineBootstrap } from '../src/index';
 const routes = composeRouter((app) => {
 	app.get('/test', (ctx) => {
-		return Res.error({
-			email: 'aduh',
-		});
+		return Res.message(ctx.query.name);
 	});
 
 	app.post('/file', async (ctx) => {
-		const file = await ctx.file('test');
-		return Res.send(file?.filename);
+		const file = await ctx.inputs('num');
+		const file2 = await ctx.input('bruh');
+		return Res.send([file, file2]);
 	});
 
 	app.get('/param/:message', (ctx) => {

@@ -1,83 +1,104 @@
 import * as querystring from 'node:querystring';
-import {
-	FormData,
-	FormDataEntryValue,
-	type IFormDataEntryValue,
-} from './formdata';
+import { FormData } from './formdata';
 import { parseMultipart } from '../utils/multipart-parser';
-import { FormDataFile } from './formdata/file';
+import { scanMultipart } from '../utils/multipart-scanner';
+import { GFile } from './formdata/file';
 import { HTTP_REQUEST_METADATA } from '../contants';
 import { CookieMap } from 'bun';
 import { GamanHeader } from './headers';
 import { randomId } from '../utils/utils';
-import type { Context, Requester } from '../types';
+import type { Context } from '../types';
 
 export async function createContext(req: Request): Promise<Context> {
-	const method = req.method?.toUpperCase() || 'GET';
-	const urlString = req.url || '/';
-	const url = new URL(urlString, `http://${req.headers.get('host')}`);
+	const method = req.method.toUpperCase();
 	const headers = new GamanHeader(req.headers);
 	const contentType = headers.get('content-type') || '';
 
-	/** FormData state */
+	let bodyBuffer: Buffer | null = null;
 	let form: FormData | null = null;
-	let bodyBuffer: Buffer;
-	let dataSet: Record<string, any> = {};
+	let _url: URL | null = null;
+	let _query: any | null = null;
+	const dataSet: Record<string, any> = Object.create(null);
 
-	const gamanRequest: Requester = {
-		id: randomId(),
-		method,
-		url: url.href,
-		pathname: url.pathname,
+	// Single source of body truth
+	const getBuffer = async () => {
+		if (bodyBuffer) return bodyBuffer;
 
-		body: async () => {
-			if (bodyBuffer == null) {
-				const arrayBuffer = await req.arrayBuffer();
-				bodyBuffer = Buffer.from(arrayBuffer);
-			}
-			return bodyBuffer;
-		},
+		//! Cek apakah request punya body sebelum mencoba membaca
+		if (method === 'GET' || method === 'HEAD') {
+			return (bodyBuffer = Buffer.alloc(0));
+		}
+		const arrayBuffer = await req.arrayBuffer();
+		bodyBuffer = Buffer.from(arrayBuffer);
+		return bodyBuffer;
 	};
+
 	const ctx: Context = {
-		url,
-		cookies: new CookieMap(req.headers.get('cookie') ?? ''),
+		get cookies() {
+			return new CookieMap(req.headers.get('cookie') ?? '');
+		},
+
+		get url() {
+			if (!_url) _url = new URL(req.url);
+			return _url;
+		},
+
+		get path() {
+			const urlStr = req.url;
+			const start = urlStr.indexOf('/', 8); // ? Skip http:// atau https://
+			const end = urlStr.indexOf('?', start);
+			return urlStr.substring(start, end === -1 ? undefined : end);
+		},
 
 		get request() {
-			return gamanRequest;
+			return {
+				id: randomId(),
+				method,
+				url: req.url,
+				pathname: this.path,
+				body: getBuffer,
+			};
 		},
+
 		header: (key: string) => headers.get(key),
 		headers: headers,
 
-		param: (name) => {
-			return ctx.params[name];
+		params: Object.create(null),
+		param(name) {
+			return this.params[name];
 		},
-		params: Object.create(null), // ini akan di set nanti di route
 
-		query: createQuery(url.searchParams),
+		get query() {
+			if (!_query) _query = createQueryProxy(this.url.searchParams);
+			return _query;
+		},
 
-		text: async () => {
-			if (bodyBuffer == null) {
-				bodyBuffer = Buffer.from(await req.arrayBuffer());
+		text: async () => (await getBuffer()).toString(),
+
+		json: async <T = any>() => {
+			try {
+				return JSON.parse(await ctx.text()) as T;
+			} catch {
+				return {} as T;
 			}
-			return bodyBuffer.toString();
 		},
 
 		formData: async () => {
-			if (form !== null) return form;
-
-			if (method === 'GET' || method === 'HEAD') {
-				return (form = new FormData());
-			}
-
+			if (form) return form;
 			if (contentType.includes('application/x-www-form-urlencoded')) {
 				const text = await ctx.text();
 				form = parseFormUrlEncoded(text);
-			} else if (contentType.includes('multipart/form-data')) {
-				const buffer = await gamanRequest.body();
-				form = await parseMultipartForm(buffer, contentType);
-			} else {
-				form = new FormData();
+				return form;
 			}
+
+			const buffer = await getBuffer();
+			const boundary = contentType
+				.split('boundary=')[1]
+				?.split(';')[0]
+				?.replace(/"/g, '');
+
+			const addresses = boundary ? scanMultipart(buffer, boundary) : [];
+			form = new FormData(buffer, addresses);
 			return form;
 		},
 
@@ -86,112 +107,92 @@ export async function createContext(req: Request): Promise<Context> {
 			((await ctx.formData()).getAll(name) || [])
 				.map((s) => s.toString())
 				.filter((s) => s != null),
-		file: async (name) => (await ctx.formData()).get(name)?.asFile() ?? null,
+		file: async (name) => {
+			const d = (await ctx.formData()).get(name);
+			if (d instanceof GFile) return d;
+			return null;
+		},
 		files: async (name) =>
 			((await ctx.formData()).getAll(name) || [])
-				.map((s) => s.asFile())
+				.map((s) => (s instanceof GFile ? s : null))
 				.filter((s) => s != null),
 
 		set(k, v) {
 			dataSet[k] = v;
 		},
-		get<T = any>(k: string): T {
-			return dataSet[k] as T;
-		},
-		has(k) {
-			return k in dataSet;
-		},
+		get: (k) => dataSet[k],
+		has: (k) => k in dataSet,
 		delete(k) {
 			delete dataSet[k];
-		},
-
-		//base context
-		get path() {
-			return gamanRequest.pathname;
-		},
-
-		json: async <T = any>() => {
-			if (
-				contentType.includes('application/json') &&
-				method !== 'GET' &&
-				method !== 'HEAD'
-			) {
-				try {
-					return (await req.json()) as T;
-				} catch {
-					return {} as T;
-				}
-			}
-			return {} as T;
 		},
 
 		// @ts-ignore
 		[HTTP_REQUEST_METADATA]: req,
 	};
+
 	return ctx;
 }
 
-function createQuery(searchParams: URLSearchParams): Context['query'] {
-	const queryFn = ((name: string) => {
-		const all = searchParams.getAll(name);
-		return all.length > 1 ? all : (all[0] ?? '');
-	}) as Context['query'];
-
-	// * Copy semua entries ke dalam fungsi agar bisa diakses sebagai object
-	for (const [key, value] of searchParams.entries()) {
-		if (!(key in queryFn)) {
-			(queryFn as any)[key] = value;
-		}
-	}
-
-	return queryFn;
+function createQueryProxy(searchParams: URLSearchParams): any {
+	return new Proxy(Object.create(null), {
+		get(_, prop: string) {
+			if (typeof prop !== 'string') return undefined;
+			const all = searchParams.getAll(prop);
+			if (all.length === 0) return '';
+			return all.length === 1 ? all[0] : all;
+		},
+		ownKeys() {
+			return Array.from(new Set(searchParams.keys()));
+		},
+		getOwnPropertyDescriptor() {
+			return { enumerable: true, configurable: true };
+		},
+	});
 }
 
 function parseFormUrlEncoded(body: string): FormData {
 	const data = querystring.parse(body);
-	const result = new FormData();
+	const formData = new FormData();
 	for (const [key, value] of Object.entries(data)) {
 		if (Array.isArray(value)) {
-			const _values: IFormDataEntryValue[] = value.map((v) => ({
-				name: key,
-				value: v as string, // Cast to string since querystring.parse returns string | string[]
-			}));
-			result.setAll(key, _values);
+			formData.setAll(key, value);
 		} else {
-			result.set(key, {
-				name: key,
-				value: (value as string) || '',
-			});
-		}
-	}
-	return result;
-}
-
-async function parseMultipartForm(
-	body: Buffer,
-	contentType: string,
-): Promise<FormData> {
-	const formData = new FormData();
-	const match = contentType.match(/boundary="?([^";]+)"?/);
-	const boundary = match?.[1];
-	if (boundary) {
-		for (let part of parseMultipart(body, boundary)) {
-			if (part.name) {
-				if (part.isText) {
-					formData.set(part.name, new FormDataEntryValue(part.name, part.text));
-				} else if (part.filename) {
-					formData.set(
-						part.name,
-						new FormDataEntryValue(
-							part.name,
-							new FormDataFile(part.filename, part.content, {
-								type: part.mediaType,
-							}),
-						),
-					);
-				}
-			}
+			formData.set(key, value || '');
 		}
 	}
 	return formData;
 }
+
+// async function parseMultipartForm(
+// 	body: Buffer,
+// 	contentType: string,
+// ): Promise<FormData> {
+// 	const formData = new FormData();
+// 	const boundary = contentType
+// 		.split('boundary=')[1]
+// 		?.split(';')[0]
+// 		?.replace(/"/g, '');
+
+// 	if (boundary) {
+// 		const parts = parseMultipart(body, boundary);
+// 		for (let i = 0; i < parts.length; i++) {
+// 			const part = parts[i];
+// 			if (!part) continue;
+
+// 			if (part.isText) {
+// 				formData.set(part.name, new FormDataEntryValue(part.name, part.text));
+// 			} else if (part.filename) {
+// 				formData.set(
+// 					part.name,
+// 					new FormDataEntryValue(
+// 						part.name,
+// 						new FormDataFile(part.filename, part.content, {
+// 							type: part.mediaType,
+// 						}),
+// 					),
+// 				);
+// 			}
+// 		}
+// 	}
+// 	return formData;
+// }

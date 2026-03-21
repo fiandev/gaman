@@ -1,6 +1,6 @@
 import { CookieMap } from 'bun';
 import { GamanHeader } from './context/headers';
-import { FormDataFile } from './context/formdata/file';
+import { GFile } from './context/formdata/file';
 import type { ControllerFactory } from './compose/controller';
 import type { Middleware, MiddlewareHandler } from './compose/middleware';
 import { FormData } from './context/formdata';
@@ -196,7 +196,7 @@ export type Context = Gaman.Context & {
 	 * Equivalent to `formData().get(name).asString()`.
 	 * @param name - The form field name.
 	 */
-	input: (name: string) => Promise<string | null>;
+	input: <T>(name: string) => Promise<string | null>;
 
 	/**
 	 * Gets a many string values from form data by name.
@@ -212,7 +212,7 @@ export type Context = Gaman.Context & {
 	 * Equivalent to `formData().get(name).asFile()`
 	 * @param name - The form field name
 	 */
-	file: (name: string) => Promise<FormDataFile | null>;
+	file: (name: string) => Promise<GFile | null>;
 
 	/**
 	 * Gets a many file values from form data by name
@@ -220,7 +220,7 @@ export type Context = Gaman.Context & {
 	 * Equivalent to `Array<formData().get(name).asFile()>`
 	 * @param name - The form field name
 	 */
-	files: (name: string) => Promise<Array<FormDataFile>>;
+	files: (name: string) => Promise<Array<GFile>>;
 
 	/**
 	 * Parses the request body as JSON.
