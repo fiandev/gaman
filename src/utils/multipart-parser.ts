@@ -3,81 +3,79 @@ export interface ParsedMultipart {
 	isText: boolean;
 	isFile: boolean;
 	filename?: string;
-	text?: string;
 	mediaType?: string;
-	content: any[];
+	content: Buffer;
+	text?: string;
 }
 
 export function parseMultipart(
-  data: Buffer,
-  boundary: string
+	data: Buffer,
+	boundary: string,
 ): ParsedMultipart[] {
-  const rawData = data.toString("latin1");
-  const parts = rawData.split(`--${boundary}`).slice(1, -1);
+	const delimiter = Buffer.from(`--${boundary}`);
+	const endDelimiter = Buffer.from(`--${boundary}--`);
+	const multipart: ParsedMultipart[] = [];
 
-  const multipart: ParsedMultipart[] = [];
+	let offset = data.indexOf(delimiter);
+  
+	while (offset !== -1) {
+		// Lewati delimiter dan \r\n
+		offset += delimiter.length + 2;
 
-  let i = 0;
-  while (i < parts.length) {
-    const part = parts[i]?.trim();
-    const [rawHeaders, ...rest] = part?.split("\r\n\r\n") ?? [];
-    const body = rest.join("\r\n\r\n");
+		// Cek apakah sudah sampai akhir (end delimiter)
+		if (data.subarray(offset, offset + 2).toString() === '--') break;
 
-    const headers = rawHeaders?.split("\r\n") ?? [];
+		// Cari batas antara Header dan Body (\r\n\r\n)
+		const headerEnd = data.indexOf('\r\n\r\n', offset);
+		if (headerEnd === -1) break;
 
-    let name = "";
-    let filename: string | undefined;
-    let contentType: string | undefined;
+		const rawHeaders = data.subarray(offset, headerEnd).toString().split('\r\n');
+		const nextDelimiter = data.indexOf(delimiter, headerEnd);
+		if (nextDelimiter === -1) break;
 
-    let j = 0;
-    while (j < (headers?.length ?? 0)) {
-      const header = headers[j];
-      const [key, ...valueParts] = header?.split(":") ?? [];
-      const lowerKey = key?.trim().toLowerCase();
-      const value = valueParts.join(":").trim();
+		// Ambil Body secara presisi (tanpa trim/string conversion)
+		// Kurangi 2 byte untuk menghilangkan \r\n sebelum boundary berikutnya
+		const body = data.subarray(headerEnd + 4, nextDelimiter - 2);
 
-      if (lowerKey === "content-disposition") {
-        const attrs = value.split(";");
-        let k = 0;
-        while (k < attrs.length) {
-          const attr = attrs[k]?.trim();
-          const [attrKey, attrValRaw] = attr?.split("=") ?? [];
-          const attrVal = attrValRaw?.trim().replace(/^"|"$/g, "");
-          if (attrKey === "name") name = attrVal ?? "";
-          if (attrKey === "filename") filename = attrVal;
-          k++;headers?.length ?? 0
-        }
-      }
+		let name = '';
+		let filename: string | undefined;
+		let contentType: string | undefined;
 
-      if (lowerKey === "content-type") {
-        contentType = value;
-      }
+		for (const header of rawHeaders) {
+			const [key, ...v] = header.split(':');
+			const lowerKey = key?.trim().toLowerCase();
+			const value = v.join(':').trim();
 
-      j++;
-    }
+			if (lowerKey === 'content-disposition') {
+				if (value.includes('name="'))
+					name = value.split('name="')[1]?.split('"')[0] ?? "";
+				if (value.includes('filename="'))
+					filename = value.split('filename="')[1]?.split('"')[0];
+			}
+			if (lowerKey === 'content-type') contentType = value;
+		}
 
-		const binaryContent = new Uint8Array(Buffer.from(body, 'latin1'));
-    if (filename) {
-      multipart.push({
-        name,
-        isText: false,
-        isFile: true,
-        filename,
-        mediaType: contentType ?? "application/octet-stream",
-        content: [binaryContent],
-      });
-    } else {
-      multipart.push({
-        name,
-        isText: true,
-        isFile: false,
-        text: body,
-        content: [binaryContent]
-      });
-    }
+		if (filename) {
+			multipart.push({
+				name,
+				isText: false,
+				isFile: true,
+				filename,
+				mediaType: contentType || 'application/octet-stream',
+				content: body,
+			});
+		} else {
+			multipart.push({
+				name,
+				isText: true,
+				isFile: false,
+				text: body.toString(),
+				content: body,
+			});
+		}
 
-    i++;
-  }
+		offset = nextDelimiter;
+	}
 
-  return multipart;
+	return multipart;
 }
