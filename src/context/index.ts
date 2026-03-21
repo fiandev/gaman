@@ -1,11 +1,10 @@
 import * as querystring from 'node:querystring';
 import { FormData } from './formdata';
-import { parseMultipart } from '../utils/multipart-parser';
 import { scanMultipart } from '../utils/multipart-scanner';
 import { GFile } from './formdata/file';
 import { HTTP_REQUEST_METADATA } from '../contants';
 import { CookieMap } from 'bun';
-import { GamanHeader } from './headers';
+import { GamanHeader } from './header';
 import { randomId } from '../utils/utils';
 import type { Context } from '../types';
 

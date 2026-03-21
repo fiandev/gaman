@@ -26,14 +26,24 @@
 			"require": "./dist/responder.js"
 		},
 		"./compose": {
-			"types": "./dist/compose.d.ts",
-			"import": "./dist/compose.mjs",
-			"require": "./dist/compose.js"
+			"types": "./dist/compose/index.d.ts",
+			"import": "./dist/compose/index.mjs",
+			"require": "./dist/compose/index.js"
 		},
 		"./utils": {
-			"types": "./dist/utils.d.ts",
-			"import": "./dist/utils.mjs",
-			"require": "./dist/utils.js"
+			"types": "./dist/utils/index.d.ts",
+			"import": "./dist/utils/index.mjs",
+			"require": "./dist/utils/index.js"
+		},
+		"./formdata": {
+			"types": "./dist/context/formdata/index.d.ts",
+			"import": "./dist/context/formdata/index.mjs",
+			"require": "./dist/context/formdata/index.js"
+		},
+		"./header": {
+			"types": "./dist/context/header/index.d.ts",
+			"import": "./dist/context/header/index.mjs",
+			"require": "./dist/context/header/index.js"
 		}
 	},
 	"repository": {

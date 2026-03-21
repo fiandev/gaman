@@ -1,5 +1,5 @@
 import { CookieMap } from 'bun';
-import { GamanHeader } from './context/headers';
+import { GamanHeader } from './context/header';
 import { GFile } from './context/formdata/file';
 import type { ControllerFactory } from './compose/controller';
 import type { Middleware, MiddlewareHandler } from './compose/middleware';

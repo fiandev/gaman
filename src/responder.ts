@@ -1,4 +1,4 @@
-import { GamanHeader } from './context/headers';
+import { GamanHeader } from './context/header';
 import type { Metadata } from './types';
 import { Logger } from './utils/logger';
 

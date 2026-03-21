@@ -1,3 +1,4 @@
+export * from './file';
 import type { PartAddress } from '../../utils/multipart-scanner';
 import { GFile } from './file';
 
