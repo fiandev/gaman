@@ -7,7 +7,7 @@ export interface ParsedMultipart {
 	filename?: string;
 	text?: string;
 	mediaType?: string;
-	content: Buffer;
+	content: any[];
 }
 
 export function parseMultipart(
@@ -76,6 +76,7 @@ export function parseMultipart(
 		}
 
 		if (!isBlank(name)) {
+			const binaryContent = new Uint8Array(Buffer.from(body, 'latin1'));
 			if (filename) {
 				multipart.push({
 					name,
@@ -83,7 +84,7 @@ export function parseMultipart(
 					isFile: true,
 					filename,
 					mediaType: contentType ?? 'application/octet-stream',
-					content: Buffer.from(body, 'latin1'),
+					content: [binaryContent],
 				});
 			} else {
 				multipart.push({
@@ -91,7 +92,7 @@ export function parseMultipart(
 					isText: true,
 					isFile: false,
 					text: body,
-					content: Buffer.from(body, 'latin1'),
+					content: [binaryContent],
 				});
 			}
 		}

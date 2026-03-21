@@ -1,5 +1,5 @@
 import { GamanHeader } from './context/headers';
-import type { Metadata } from './index.types';
+import type { Metadata } from './types';
 import { Logger } from './utils/logger';
 
 export const DEFAULT_MESSAGES: Record<number, string> = {
@@ -119,6 +119,7 @@ export interface IResponseOptions {
 	headers?: Record<string, string | string[]>;
 	message?: string;
 	metadata?: Record<string, any>;
+	errors?: Record<string, string | string[]>;
 }
 
 export class Responder {
@@ -130,7 +131,7 @@ export class Responder {
 
 	// Internal states for consistency
 	private _data: any = null;
-	private _message: string = 'Success';
+	private _message?: string;
 	private _meta: Record<string, any> = {};
 	private _errors: Record<string, string | string[]> = {};
 	private _isManualBody: boolean = false;
@@ -140,9 +141,9 @@ export class Responder {
 		this.headers = new GamanHeader(new Headers(options.headers as any));
 		this.statusCode = options.status || 200;
 		this.statusTextMessage = options.statusText || '';
-		this._message =
-			options.message ?? DEFAULT_MESSAGES[this.statusCode] ?? 'Unknown Status';
+		this._message = options.message;
 		this._meta = options.metadata || {};
+		this._errors = options.errors || {};
 	}
 
 	/**
@@ -158,7 +159,8 @@ export class Responder {
 
 		const payload: any = {
 			success: this.statusCode >= 200 && this.statusCode < 300,
-			message:  DEFAULT_MESSAGES[this.statusCode] ?? this._message ?? 'Unknown Status',
+			message:
+				this._message ?? DEFAULT_MESSAGES[this.statusCode] ?? 'Unknown Status',
 		};
 
 		if (this._data !== null && this._data !== undefined) {
@@ -246,6 +248,44 @@ export class Responder {
 				: initOrStatus;
 
 		const res = new Responder(data, ops);
+
+		if (!res.headers.has('Content-Type')) {
+			res.headers.set('Content-Type', 'application/json; charset=utf-8');
+		}
+
+		return res;
+	}
+
+	static message(msg: string, initOrStatus: IResponseOptions | number = {}) {
+		const ops: IResponseOptions =
+			typeof initOrStatus === 'number'
+				? { status: initOrStatus }
+				: initOrStatus;
+
+		const res = new Responder(undefined, {
+			...ops,
+			message: msg,
+		});
+
+		if (!res.headers.has('Content-Type')) {
+			res.headers.set('Content-Type', 'application/json; charset=utf-8');
+		}
+
+		return res;
+	}
+
+	static error(
+		errors: Record<string, string | string[]>,
+		initOrStatus: IResponseOptions | number = {},
+	) {
+		const ops: IResponseOptions =
+			typeof initOrStatus === 'number'
+				? { status: initOrStatus }
+				: initOrStatus;
+
+		const res = new Responder(undefined, {
+			...ops,
+		}).error(errors);
 
 		if (!res.headers.has('Content-Type')) {
 			res.headers.set('Content-Type', 'application/json; charset=utf-8');

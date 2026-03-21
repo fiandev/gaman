@@ -1,5 +1,4 @@
 import * as querystring from 'node:querystring';
-import type { ContextHTTP, Requester } from './index.types';
 import {
 	FormData,
 	FormDataEntryValue,
@@ -11,10 +10,9 @@ import { HTTP_REQUEST_METADATA } from '../contants';
 import { CookieMap } from 'bun';
 import { GamanHeader } from './headers';
 import { randomId } from '../utils/utils';
-import type { HTTP, Metadata } from '../index.types';
-import { Responder } from '../responder';
+import type { Context, Requester } from '../types';
 
-export async function createContext(req: Request): Promise<ContextHTTP<HTTP>> {
+export async function createContext(req: Request): Promise<Context> {
 	const method = req.method?.toUpperCase() || 'GET';
 	const urlString = req.url || '/';
 	const url = new URL(urlString, `http://${req.headers.get('host')}`);
@@ -26,7 +24,7 @@ export async function createContext(req: Request): Promise<ContextHTTP<HTTP>> {
 	let bodyBuffer: Buffer;
 	let dataSet: Record<string, any> = {};
 
-	const gamanRequest: Requester<HTTP> = {
+	const gamanRequest: Requester = {
 		id: randomId(),
 		method,
 		url: url.href,
@@ -39,22 +37,8 @@ export async function createContext(req: Request): Promise<ContextHTTP<HTTP>> {
 			}
 			return bodyBuffer;
 		},
-		json: async <T = any>() => {
-			if (
-				contentType.includes('application/json') &&
-				method !== 'GET' &&
-				method !== 'HEAD'
-			) {
-				try {
-					return (await req.json()) as T;
-				} catch {
-					return {} as T;
-				}
-			}
-			return {} as T;
-		},
 	};
-	const ctx: ContextHTTP = {
+	const ctx: Context = {
 		url,
 		cookies: new CookieMap(req.headers.get('cookie') ?? ''),
 
@@ -126,31 +110,19 @@ export async function createContext(req: Request): Promise<ContextHTTP<HTTP>> {
 			return gamanRequest.pathname;
 		},
 
-		async metadata() {
-			const meta: Metadata = {
-				requestId: gamanRequest.id,
-			};
-
-			const json = await ctx.request.json();
-			if (json.metadata && typeof json.metadata === 'object') {
-				return {
-					...meta,
-					...json.metadata,
-				};
+		json: async <T = any>() => {
+			if (
+				contentType.includes('application/json') &&
+				method !== 'GET' &&
+				method !== 'HEAD'
+			) {
+				try {
+					return (await req.json()) as T;
+				} catch {
+					return {} as T;
+				}
 			}
-			return meta;
-		},
-
-		async data() {
-			const json = await ctx.request.json();
-			if (json.data && typeof json.data === 'object') {
-				return json.data;
-			}
-			return json;
-		},
-
-		send(data, initOrStatus) {
-			return Responder.send(data, initOrStatus);
+			return {} as T;
 		},
 
 		// @ts-ignore
@@ -159,11 +131,11 @@ export async function createContext(req: Request): Promise<ContextHTTP<HTTP>> {
 	return ctx;
 }
 
-function createQuery(searchParams: URLSearchParams): ContextHTTP['query'] {
+function createQuery(searchParams: URLSearchParams): Context['query'] {
 	const queryFn = ((name: string) => {
 		const all = searchParams.getAll(name);
 		return all.length > 1 ? all : (all[0] ?? '');
-	}) as ContextHTTP['query'];
+	}) as Context['query'];
 
 	// * Copy semua entries ke dalam fungsi agar bisa diakses sebagai object
 	for (const [key, value] of searchParams.entries()) {
@@ -212,7 +184,7 @@ async function parseMultipartForm(
 						part.name,
 						new FormDataEntryValue(
 							part.name,
-							new FormDataFile(part.filename, [part.content], {
+							new FormDataFile(part.filename, part.content, {
 								type: part.mediaType,
 							}),
 						),

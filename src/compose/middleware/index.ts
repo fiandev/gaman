@@ -1,10 +1,10 @@
 import { IS_MIDDLEWARE, IS_MIDDLEWARE_HANDLER } from '../../contants';
 import { Priority } from '../../enums/priority.enum';
 import { Responder } from '../../responder';
-import { ContextHTTP } from '../../types';
+import type { Context } from '../../types';
 
 export type MiddlewareHandler = (
-	ctx: ContextHTTP,
+	ctx: Context,
 	next: () => Responder | Promise<Responder>,
 ) => Responder | Promise<Responder>;
 

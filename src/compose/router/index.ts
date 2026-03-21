@@ -1,13 +1,11 @@
 import { IS_ROUTES } from '../../contants';
-import { Middleware, MiddlewareHandler } from '../middleware';
+import type { Middleware, MiddlewareHandler } from '../middleware';
 import { Router } from '../../router';
-import { AppTransportation, RequestHandler, RouterBuilder, Routes } from '../../types';
+import type { RequestHandler, RouterBuilder, Routes } from '../../types';
 import { sortArrayByPriority } from '../../utils/priority';
 
-export function composeRouter<T extends AppTransportation>(
-	callback: (r: RouterBuilder<T>) => void,
-): Routes<T> {
-	const builder = Router<T>();
+export function composeRouter(callback: (r: RouterBuilder) => void): Routes {
+	const builder = Router();
 	callback(builder);
 
 	const routes = builder.getRoutes();
@@ -19,7 +17,7 @@ export function composeRouter<T extends AppTransportation>(
 			(mw) => mw.config.priority,
 		);
 
-		const pipes: Array<MiddlewareHandler | RequestHandler<T>> = [
+		const pipes: Array<MiddlewareHandler | RequestHandler> = [
 			...sortedMiddlewares.map((i) => i.handler),
 		];
 
@@ -37,5 +35,5 @@ export function composeRouter<T extends AppTransportation>(
 		enumerable: false,
 	});
 
-	return useable_routes as Routes<T>;
+	return useable_routes as Routes;
 }

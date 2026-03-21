@@ -20,10 +20,10 @@
     <img src="https://img.shields.io/discord/1410220109347160220?label=Discord&logo=Discord" alt="Disocrd">
   </a>
   <a href="https://www.npmjs.com/package/gaman">
-    <img src="https://img.shields.io/npm/v/@gaman/core" alt="npm version">
+    <img src="https://img.shields.io/npm/v/gaman" alt="npm version">
   </a>
   <a href="https://www.npmjs.com/package/gaman">
-    <img src="https://img.shields.io/npm/dm/@gaman/core" alt="npm download">
+    <img src="https://img.shields.io/npm/dm/gaman" alt="npm download">
   </a>
   <a href="https://github.com/gamanjs/gaman/pulse">
     <img src="https://img.shields.io/github/commit-activity/m/gamanjs/gaman" alt="Commit Activity">
@@ -32,7 +32,7 @@
     <img src="https://img.shields.io/github/last-commit/gamanjs/gaman" alt="Commit Activity">
   </a>
   <a>
-    <img src="https://img.shields.io/npm/l/@gaman/core" alt="npm license">
+    <img src="https://img.shields.io/npm/l/gaman" alt="npm license">
   </a>
   <a>
     <img src="https://img.shields.io/github/stars/7togkid/gaman" alt="github stars">

@@ -10,11 +10,11 @@ export class FormDataFile extends Blob {
 
 	constructor(
 		filename: string,
-		sources: Bun.BlobPart[],
+		sources: any,
 		options?: BlobPropertyBag & { lastModified?: number | undefined },
 	) {
 		const mimeType = options?.type || detectMime(filename) || '';
-		super(sources, { ...options, type: mimeType });
+		super(sources,{ ...options, type: mimeType });
 		this.filename = filename;
 		this.lastModified = options?.lastModified ?? Date.now();
 		this._type = mimeType;
@@ -29,8 +29,7 @@ export class FormDataFile extends Blob {
 	 * @param path string - output path
 	 */
 	async saveTo(path: string) {
-		const { writeFile } = await import('node:fs/promises');
-		await writeFile(path, Buffer.from(await this.arrayBuffer()));
+		return await Bun.write(path, this);
 	}
 
 	/**
@@ -81,12 +80,13 @@ export class FormDataFile extends Blob {
 	 * Saves the file to a temporary path and returns it
 	 */
 	async saveTemp(prefix = 'file_'): Promise<string> {
-		const { writeFile } = await import('node:fs/promises');
 		const { tmpdir } = await import('node:os');
 		const { join } = await import('node:path');
+
 		const name = `${prefix}${Date.now()}_${this.filename}`;
 		const fullPath = join(tmpdir(), name);
-		await writeFile(fullPath, Buffer.from(await this.arrayBuffer()));
+
+		await Bun.write(fullPath, this); // Jauh lebih cepat
 		return fullPath;
 	}
 
