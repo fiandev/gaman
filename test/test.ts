@@ -1,15 +1,25 @@
-import { composeRouter } from '../src/compose';
+import { composeException, composeRouter } from '../src/compose';
 import { defineBootstrap } from '../src/index';
 const routes = composeRouter((app) => {
+	app.all('/*', () => {
+		return Res.notFound({
+			message: 'askdakdak',
+		});
+	});
 	app.get('/test', (ctx) => {
 		return Res.message(ctx.query.name);
 	});
 
-	app.post('/file', async (ctx) => {
-		const file = await ctx.inputs('num');
-		const file2 = await ctx.input('bruh');
-		return Res.send([file, file2]);
-	});
+	app
+		.post('/file', async (ctx) => {
+			const file = await ctx.inputs('num');
+			const file2 = await ctx.input('bruh');
+			const file3 = await ctx.file('test');
+			return Res.send([file, file2, file3]);
+		})
+		.exception((err, ctx) => {
+			console.log("anjay bisa cuy")
+		});
 
 	app.get('/param/:message', (ctx) => {
 		return Res.send(ctx.param('message'));
@@ -17,8 +27,12 @@ const routes = composeRouter((app) => {
 });
 
 defineBootstrap((app) => {
-	app.mountRouter(routes);
-
+	app.mount(routes);
+	app.mount(
+		composeException((err, ctx) => {
+			console.log('HWEHEHEHEE', err);
+		}),
+	);
 	app.mountServer({
 		http: {
 			port: 3431,

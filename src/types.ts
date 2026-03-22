@@ -239,6 +239,15 @@ export type Context = Gaman.Context & {
 /* -------------------------------------------------------------------------- */
 export type RouteFactory = (route: RouterBuilder) => void;
 
+
+export type ComposedPipeline = Array<MiddlewareHandler | RequestHandler>;
+export interface RouteMetadata {
+  id: string;
+	exceptionHandler: ExceptionHandler | null;
+  pipeline: ComposedPipeline; 
+}
+
+
 /**
  * Route Model
  */
@@ -247,7 +256,7 @@ export interface Route {
 	methods: string[];
 	handler: RequestHandler | null;
 	middlewares: Middleware[];
-	exceptions: ExceptionHandler[];
+	exceptionHandler: ExceptionHandler | null;
 	pipes: Array<MiddlewareHandler | RequestHandler>;
 	name?: string;
 }
@@ -261,7 +270,7 @@ export type Routes = Array<Route>;
  */
 export type RouteDefinition = {
 	middleware(...fn: Middleware[]): RouteDefinition;
-	exception(...eh: ExceptionHandler[]): RouteDefinition;
+	exception(eh: ExceptionHandler): RouteDefinition;
 	name(s: string): RouteDefinition;
 };
 
@@ -367,7 +376,7 @@ export type RouterBuilder = {
 	 * Registers a route for a specific set of HTTP methods.
 	 */
 	match: (
-		methods: string[],
+		methods: HTTPMethod[],
 		path: string,
 		handler: RequestHandler | [fn: ControllerFactory, name: string],
 	) => RouteDefinition;

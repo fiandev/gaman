@@ -8,7 +8,11 @@ import { GamanHeader } from './header';
 import { randomId } from '../utils/utils';
 import type { Context } from '../types';
 
-export async function createContext(req: Request): Promise<Context> {
+export async function createContext(
+	req: Request,
+	pathname: string,
+	params: Record<string, any>,
+): Promise<Context> {
 	const method = req.method.toUpperCase();
 	const headers = new GamanHeader(req.headers);
 	const contentType = headers.get('content-type') || '';
@@ -33,6 +37,8 @@ export async function createContext(req: Request): Promise<Context> {
 	};
 
 	const ctx: Context = {
+		path: pathname,
+		params,
 		get cookies() {
 			return new CookieMap(req.headers.get('cookie') ?? '');
 		},
@@ -40,13 +46,6 @@ export async function createContext(req: Request): Promise<Context> {
 		get url() {
 			if (!_url) _url = new URL(req.url);
 			return _url;
-		},
-
-		get path() {
-			const urlStr = req.url;
-			const start = urlStr.indexOf('/', 8); // ? Skip http:// atau https://
-			const end = urlStr.indexOf('?', start);
-			return urlStr.substring(start, end === -1 ? undefined : end);
 		},
 
 		get request() {
@@ -62,7 +61,6 @@ export async function createContext(req: Request): Promise<Context> {
 		header: (key: string) => headers.get(key),
 		headers: headers,
 
-		params: Object.create(null),
 		param(name) {
 			return this.params[name];
 		},

@@ -1,3 +1,4 @@
+import { composeException } from '../compose';
 import type { ControllerFactory } from '../compose/controller/index';
 import type {
 	RequestHandler,
@@ -5,6 +6,7 @@ import type {
 	RouteDefinition,
 	RouterBuilder,
 } from '../types';
+import { isExceptionHandler } from '../utils/is';
 import { normalizePath } from '../utils/utils';
 
 export function Router(prefix: string = ''): RouterBuilder {
@@ -32,7 +34,7 @@ export function Router(prefix: string = ''): RouterBuilder {
 		const routeData: Route = {
 			path: fullPath,
 			methods,
-			exceptions: [],
+			exceptionHandler: null,
 			handler: finalHandler,
 			middlewares: [],
 			pipes: [],
@@ -45,7 +47,11 @@ export function Router(prefix: string = ''): RouterBuilder {
 				return definition;
 			},
 			exception(eh) {
-				routeData.exceptions.push(eh);
+				if (isExceptionHandler(eh)) {
+					routeData.exceptionHandler = eh;
+				} else {
+					routeData.exceptionHandler = composeException(eh);
+				}
 				return definition;
 			},
 			name(s) {
@@ -86,8 +92,13 @@ export function Router(prefix: string = ''): RouterBuilder {
 					return groupDef;
 				},
 				exception(eh) {
-					const ehs = Array.isArray(eh) ? eh : [eh];
-					childRoutes.forEach((r) => r.exceptions.unshift(...ehs));
+					childRoutes.forEach((r) => {
+						if (isExceptionHandler(eh)) {
+							r.exceptionHandler = eh;
+						} else {
+							r.exceptionHandler = composeException(eh);
+						}
+					});
 					return groupDef;
 				},
 
