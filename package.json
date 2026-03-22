@@ -1,6 +1,7 @@
 {
 	"name": "gaman",
-	"version": "2.0.0",
+	"description": "A Lean Framework for Heavy-Duty Enterprise Performance.",
+	"version": "2.0.2",
 	"author": {
 		"name": "Angga7Togk",
 		"url": "https://github.com/angga7togk"

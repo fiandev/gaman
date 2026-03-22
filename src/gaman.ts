@@ -1,4 +1,4 @@
-import './global.ts';
+import './global';
 
 import { isExceptionHandler, isMiddleware, isRoutes } from './utils/is';
 import { createContext } from './context';

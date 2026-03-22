@@ -46,7 +46,7 @@
 GamanJS currently only supports Bun runtime.
 
 ```bash
-bun create gaman app
+bun create gaman@latest
 ```
 
 ## Documentation

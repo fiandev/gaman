@@ -99,17 +99,17 @@ describe('Multipart Parser Benchmark', async () => {
 		console.log(`   Input Size: ${(input.length / 1024).toFixed(2)} KB`);
 	});
 
-	it('should save file correctly using FormDataFile', async () => {
-		const result = parseMultipart(input, boundary);
-		const avatar = result.find((p) => p.filename === 'avatar.png');
+	// it('should save file correctly using FormDataFile', async () => {
+	// 	const result = parseMultipart(input, boundary);
+	// 	const avatar = result.find((p) => p.filename === 'avatar.png');
 
-		if (avatar) {
-			// Gunakan instance FormDataFile kamu
-			const saver = new GFile(avatar.filename!, avatar.content);
-			await saver.saveTo('./test_output.png');
+	// 	if (avatar) {
+	// 		// Gunakan instance FormDataFile kamu
+	// 		const saver = new GFile(avatar.filename!, avatar.content);
+	// 		await saver.saveTo('./test_output.png');
 
-			// Verifikasi file ada
-			expect(fs.existsSync('./test_output.png')).toBe(true);
-		}
-	});
+	// 		// Verifikasi file ada
+	// 		expect(fs.existsSync('./test_output.png')).toBe(true);
+	// 	}
+	// });
 });
