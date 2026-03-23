@@ -39,23 +39,17 @@ export async function createContext(
 	const ctx: Context = {
 		path: pathname,
 		params,
-		get cookies() {
-			return new CookieMap(req.headers.get('cookie') ?? '');
+		cookies: new CookieMap(req.headers.get('cookie') ?? ''),
+		request: {
+			id: headers.get('x-request-id') || randomId(),
+			method,
+			url: req.url,
+			pathname,
+			body: getBuffer,
 		},
-
 		get url() {
 			if (!_url) _url = new URL(req.url);
 			return _url;
-		},
-
-		get request() {
-			return {
-				id: randomId(),
-				method,
-				url: req.url,
-				pathname: this.path,
-				body: getBuffer,
-			};
 		},
 
 		header: (key: string) => headers.get(key),
