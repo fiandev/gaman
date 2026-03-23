@@ -7,7 +7,7 @@ const routes = composeRouter((app) => {
 		});
 	});
 	app.get('/test', (ctx) => {
-		return Res.message(ctx.query.name);
+		return Res.json({bruh: 'sadsa'});
 	});
 
 	app

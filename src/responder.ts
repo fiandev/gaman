@@ -138,6 +138,7 @@ export class Responder {
 
 	constructor(body?: any, options: IResponseOptions = {}) {
 		this._data = body;
+		this.body = body;
 		this.headers = new GamanHeader(new Headers(options.headers as any));
 		this.statusCode = options.status || 200;
 		this.statusTextMessage = options.statusText || '';
@@ -298,7 +299,16 @@ export class Responder {
 		data: any,
 		initOrStatus: IResponseOptions | number = {},
 	): Responder {
-		const res = this.send(data, initOrStatus);
+		const ops: IResponseOptions =
+			typeof initOrStatus === 'number'
+				? { status: initOrStatus }
+				: initOrStatus;
+
+		const res = new Responder(JSON.stringify(data), ops);
+
+		if (!res.headers.has('Content-Type')) {
+			res.headers.set('Content-Type', 'application/json; charset=utf-8');
+		}
 		res._isManualBody = true;
 		return res;
 	}
