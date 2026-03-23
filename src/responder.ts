@@ -145,28 +145,25 @@ function buildPayload(statusCode: number, data: any, ops: IResponseOptions) {
 		payload.metadata = ops.metadata;
 	}
 
-	return Bun.JSON5.stringify(payload);
+	return JSON.stringify(payload);
 }
 
 function parseOps(initOrStatus: IResponseOptions | number = {}): IResponseOptions {
-    if (typeof initOrStatus === 'number') return { status: initOrStatus };
-    return initOrStatus;
+	if (typeof initOrStatus === 'number') return { status: initOrStatus };
+	return initOrStatus;
 }
 
 export const Responder = {
 	send(data: any, initOrStatus: IResponseOptions | number = {}) {
 		const ops = parseOps(initOrStatus);
 		const status = ops.status || 200;
-		const headers = (ops.headers || {}) as any;
-
-		if (!headers['Content-Type'] && !headers['content-type']) {
-			headers['Content-Type'] = 'application/json; charset=utf-8';
-		}
+		const headers = new Headers(ops.headers as any);
+		if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json; charset=utf-8');
 
 		return new Response(buildPayload(status, data, ops), {
 			status,
 			statusText: ops.statusText || DEFAULT_MESSAGES[status],
-			headers,
+			headers
 		});
 	},
 
@@ -174,106 +171,93 @@ export const Responder = {
 		const ops = parseOps(initOrStatus);
 		ops.message = msg;
 		const status = ops.status || 200;
-		const headers = (ops.headers || {}) as any;
-
-		if (!headers['Content-Type'] && !headers['content-type']) {
-			headers['Content-Type'] = 'application/json; charset=utf-8';
-		}
+		const headers = new Headers(ops.headers as any);
+		if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json; charset=utf-8');
 
 		return new Response(buildPayload(status, null, ops), {
 			status,
 			statusText: ops.statusText || DEFAULT_MESSAGES[status],
-			headers,
+			headers
 		});
 	},
 
-	error(
-		errors: Record<string, string | string[]>,
-		initOrStatus: IResponseOptions | number = {},
-	) {
+	error(errors: Record<string, string | string[]>, initOrStatus: IResponseOptions | number = {}) {
 		const ops = parseOps(initOrStatus);
 		ops.errors = errors;
-		const status = ops.status || 400;
-		const headers = (ops.headers || {}) as any;
-
-		if (!headers['Content-Type'] && !headers['content-type']) {
-			headers['Content-Type'] = 'application/json; charset=utf-8';
-		}
+		const status = ops.status || 400; // default 400 for errors if not overridden to >= 400
+		const headers = new Headers(ops.headers as any);
+		if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json; charset=utf-8');
 
 		return new Response(buildPayload(status, null, ops), {
 			status,
 			statusText: ops.statusText || DEFAULT_MESSAGES[status],
-			headers,
+			headers
 		});
 	},
 
 	json(data: any, initOrStatus: IResponseOptions | number = {}) {
 		const ops = parseOps(initOrStatus);
 		const status = ops.status || 200;
-		const headers = (ops.headers || {}) as any;
+		const headers = new Headers(ops.headers as any);
+		if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json; charset=utf-8');
 
-		if (!headers['Content-Type'] && !headers['content-type']) {
-			headers['Content-Type'] = 'application/json; charset=utf-8';
-		}
-
-		return new Response(Bun.JSON5.stringify(data), {
+		return new Response(JSON.stringify(data), {
 			status,
 			statusText: ops.statusText || DEFAULT_MESSAGES[status],
-			headers,
+			headers
 		});
 	},
 
 	text(message: string, initOrStatus: IResponseOptions | number = {}) {
 		const ops = parseOps(initOrStatus);
 		const status = ops.status || 200;
-		const headers = (ops.headers || {}) as any;
-		headers['Content-Type'] = 'text/plain';
+		const headers = new Headers(ops.headers as any);
+		headers.set('Content-Type', 'text/plain');
 
 		return new Response(message, {
 			status,
 			statusText: ops.statusText || DEFAULT_MESSAGES[status],
-			headers,
+			headers
 		});
 	},
 
 	html(body: string, initOrStatus: IResponseOptions | number = {}) {
 		const ops = parseOps(initOrStatus);
 		const status = ops.status || 200;
-		const headers = (ops.headers || {}) as any;
-		headers['Content-Type'] = 'text/html';
+		const headers = new Headers(ops.headers as any);
+		headers.set('Content-Type', 'text/html');
 
 		return new Response(body, {
 			status,
 			statusText: ops.statusText || DEFAULT_MESSAGES[status],
-			headers,
+			headers
 		});
 	},
 
-	render(
-		viewName: string,
-		viewData: Record<string, any> = {},
-		initOrStatus: IResponseOptions = { status: 200 },
-	) {
+	render(viewName: string, viewData: Record<string, any> = {}, initOrStatus: IResponseOptions = { status: 200 }) {
+		// Used by views engine. We return a ViewResponse and let Gaman core resolve it.
+		// Wait, previously Responder.render returned a Responder with .view hydrated.
+		// We will return a fresh ViewResponse object directly, and update Gaman.ts to check `instanceof ViewResponse`.
 		return new ViewResponse(viewName, viewData, initOrStatus);
 	},
 
 	stream(readableStream: any, initOrStatus: IResponseOptions | number = {}) {
 		const ops = parseOps(initOrStatus);
 		const status = ops.status || 200;
-		const headers = (ops.headers || {}) as any;
-		headers['Content-Type'] = 'application/octet-stream';
+		const headers = new Headers(ops.headers as any);
+		headers.set('Content-Type', 'application/octet-stream');
 
 		return new Response(readableStream, {
 			status,
 			statusText: ops.statusText || DEFAULT_MESSAGES[status],
-			headers,
+			headers
 		});
 	},
 
 	redirect(location: string, statusNumber: number = 302) {
 		return new Response(null, {
 			status: statusNumber,
-			headers: { Location: location },
+			headers: { 'Location': location }
 		});
 	},
 
@@ -281,47 +265,7 @@ export const Responder = {
 		return this.send(data, { status: 200 });
 	},
 
-	created(data?: any) {
-		return this.send(data, { status: 201 });
-	},
-
-	accepted(data?: any) {
-		return this.send(data, { status: 202 });
-	},
-
-	noContent() {
-		return new Response(null, { status: 204 });
-	},
-
-	movedPermanently(location: string) {
-		return this.redirect(location, 301);
-	},
-
-	badRequest(data?: any) {
-		return this.send(data, { status: 400 });
-	},
-
-	unauthorized(data?: any) {
-		return this.send(data, { status: 401 });
-	},
-
-	forbidden(data?: any) {
-		return this.send(data, { status: 403 });
-	},
-
 	notFound(data?: any) {
 		return this.send(data, { status: 404 });
-	},
-
-	methodNotAllowed() {
-		return new Response(null, { status: 405 });
-	},
-
-	tooManyRequests(data?: any) {
-		return this.send(data, { status: 429 });
-	},
-
-	internalServerError(data?: any) {
-		return this.send(data, { status: 500 });
-	},
+	}
 };
