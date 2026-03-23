@@ -3,12 +3,6 @@ import { appendFile } from 'node:fs/promises';
 
 export const Logger = {
 	level: 'debug' as 'info' | 'debug' | 'warn' | 'error',
-	response: {
-		requestId: null,
-		method: '',
-		route: '',
-		status: null,
-	},
 
 	log: (...msg: any[]) => Logger.info(...msg),
 
@@ -20,11 +14,7 @@ export const Logger = {
 	_log: (type: 'info' | 'debug' | 'warn' | 'error', msg: any[]) => {
 		if (!Logger.shouldLog(type)) return;
 
-		const requestId = Logger.response.requestId ?? null;
 		const time = Logger.getShortTime();
-		const status = Logger.response.status ?? '';
-		const method = Logger.response.method?.toUpperCase() || '';
-		const route = Logger.response.route || '';
 
 		const colorPrefix: Record<typeof type, string> = {
 			info: '§a[INFO~]',
@@ -40,15 +30,7 @@ export const Logger = {
 			error: '§c',
 		};
 
-		const statusColor = Logger.getStatusColor(Logger.response.status);
-
-		const text =
-			`${colorPrefix[type]} §8[${time}]` +
-			(requestId ? ` §8[§6${requestId}§8]` : '') +
-			(method && route ? ` §8[§d${method}§8] §f${route}` : '') +
-			(status !== ''
-				? ` §8[${statusColor}${status} ${Logger.getStatusText(status)}§8]`
-				: '');
+		const text = `${colorPrefix[type]} §8[${time}]`;
 
 		msg = [
 			TextFormat.format(text) + TextFormat.format(color[type]),
@@ -66,14 +48,6 @@ export const Logger = {
 		console[type === 'error' ? 'error' : type === 'warn' ? 'warn' : 'log'](
 			...msg,
 		);
-
-		try {
-			const clean = msg
-				.join(' ')
-				.replace(/§[0-9a-fk-or]/gi, '')
-				.replace(/\x1B\[[0-9;]*m/g, '');
-			appendFile('log.txt', clean + '\n');
-		} catch {}
 	},
 
 	getStatusColor: (status: number | null) => {
@@ -104,23 +78,13 @@ export const Logger = {
 		return levels[level] <= levels[Logger.level];
 	},
 
-	setRequestId(requestId: string) {
-		//@ts-ignore
-		Logger.response.requestId = requestId;
-	},
+	setRequestId(requestId: string) {},
 
-	setRoute(route: string) {
-		Logger.response.route = route;
-	},
+	setRoute(route: string) {},
 
-	setStatus(status: number | null) {
-		//@ts-ignore
-		Logger.response.status = status;
-	},
+	setStatus(status: number | null) {},
 
-	setMethod(method: string) {
-		Logger.response.method = method;
-	},
+	setMethod(method: string) {},
 
 	getShortTime: () => {
 		const now = new Date();

@@ -1,13 +1,9 @@
 export class GamanHeader {
-	// [value, setted?]
-	private data: Map<string, [string | string[], boolean]> = new Map();
+	private data: Map<string, [string | string[], boolean]> | null = null;
+	private originalHeaders: Headers;
 
 	constructor(headers: Headers = new Headers()) {
-		for (const [key, value] of headers) {
-			if (value) {
-				this.data.set(key.toLowerCase(), [value, false]);
-			}
-		}
+		this.originalHeaders = headers;
 	}
 
 	/**
@@ -20,38 +16,70 @@ export class GamanHeader {
 	 */
 	get(key: string): string | null {
 		const k = key.toLowerCase();
-		const r = this.data.get(k);
-		if (!r) return null;
-		const [value] = r;
-		return Array.isArray(value) ? value.join(', ') : value;
+		if (this.data && this.data.has(k)) {
+			const [value] = this.data.get(k)!;
+			return Array.isArray(value) ? value.join(', ') : value;
+		}
+		return this.originalHeaders.get(k);
 	}
 
 	set(key: string, value: string | string[]): this {
+		if (!this.data) this.data = new Map();
 		this.data.set(key.toLowerCase(), [value, true]);
 		return this;
 	}
 
 	has(key: string): boolean {
 		const k = key.toLowerCase();
-		return this.data.has(k);
+		if (this.data && this.data.has(k)) return true;
+		return this.originalHeaders.has(k);
 	}
 
 	delete(key: string): boolean {
 		const k = key.toLowerCase();
-		return this.data.delete(k);
+		if (this.data) {
+			this.data.delete(k);
+		}
+		// Notice: originalHeaders in Bun might not be mutator friendly if read-only request headers, so we just return true.
+		return true; // We don't delete from originalHeaders typically since it represents the incoming request
 	}
 
-	keys(): IterableIterator<string> {
-		return this.data.keys();
+	*keys(): IterableIterator<string> {
+		const seen = new Set<string>();
+		if (this.data) {
+			for (const k of this.data.keys()) {
+				seen.add(k);
+				yield k;
+			}
+		}
+		for (const [k] of this.originalHeaders) {
+			if (!seen.has(k)) yield k;
+		}
 	}
 
-	entries(): IterableIterator<[string, [string | string[], boolean]]> {
-		return this.data.entries();
+	*entries(): IterableIterator<[string, [string | string[], boolean]]> {
+		const seen = new Set<string>();
+		if (this.data) {
+			for (const [k, v] of this.data.entries()) {
+				seen.add(k);
+				yield [k, v];
+			}
+		}
+		for (const [k, v] of this.originalHeaders) {
+			if (!seen.has(k)) yield [k, [v, false]];
+		}
+	}
+
+	*getSetHeaders(): IterableIterator<[string, string | string[]]> {
+		if (!this.data) return;
+		for (const [k, [v, isSet]] of this.data.entries()) {
+			if (isSet) yield [k, v];
+		}
 	}
 
 	toRecord(): Record<string, string> {
 		const result: Record<string, string> = {};
-		for (const [key, [value]] of this.data.entries()) {
+		for (const [key, [value]] of this.entries()) {
 			result[key] = Array.isArray(value) ? value.join(', ') : value;
 		}
 		return result;
@@ -59,7 +87,7 @@ export class GamanHeader {
 
 	toMap(): Map<string, string | string[]> {
 		const result = new Map<string, string | string[]>();
-		for (const [key, [value]] of this.data.entries()) {
+		for (const [key, [value]] of this.entries()) {
 			result.set(key, value);
 		}
 		return result;

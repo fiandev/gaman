@@ -8,11 +8,11 @@ import { GamanHeader } from './header';
 import { randomId } from '../utils/utils';
 import type { Context } from '../types';
 
-export async function createContext(
+export function createContext(
 	req: Request,
 	pathname: string,
 	params: Record<string, any>,
-): Promise<Context> {
+): Context {
 	const method = req.method.toUpperCase();
 	const headers = new GamanHeader(req.headers);
 	const contentType = headers.get('content-type') || '';
@@ -41,7 +41,7 @@ export async function createContext(
 		params,
 		cookies: new CookieMap(req.headers.get('cookie') ?? ''),
 		request: {
-			id: headers.get('x-request-id') || randomId(),
+			id: headers.get('x-request-id') || '',
 			method,
 			url: req.url,
 			pathname,

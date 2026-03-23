@@ -5,8 +5,8 @@ import type { Context } from '../../types';
 
 export type MiddlewareHandler = (
 	ctx: Context,
-	next: () => Responder | Promise<Responder>,
-) => Responder | Promise<Responder>;
+	next: () => any | Promise<any>,
+) => any | Promise<any>;
 
 export interface MiddlewareOptions {
 	priority: Priority;

@@ -122,396 +122,206 @@ export interface IResponseOptions {
 	errors?: Record<string, string | string[]>;
 }
 
-export class Responder {
-	public view?: ViewResponse;
-	public headers: GamanHeader;
-	public statusCode: number;
-	public statusTextMessage: string;
-	public body?: any;
+function buildPayload(statusCode: number, data: any, ops: IResponseOptions) {
+	if (statusCode === 204) return null;
+	const payload: any = {
+		success: statusCode >= 200 && statusCode < 300,
+		message: ops.message ?? DEFAULT_MESSAGES[statusCode] ?? 'Unknown Status',
+	};
 
-	// Internal states for consistency
-	private _data: any = null;
-	private _message?: string;
-	private _meta: Record<string, any> = {};
-	private _errors: Record<string, string | string[]> = {};
-	private _isManualBody: boolean = false;
-
-	constructor(body?: any, options: IResponseOptions = {}) {
-		this._data = body;
-		this.body = body;
-		this.headers = new GamanHeader(new Headers(options.headers as any));
-		this.statusCode = options.status || 200;
-		this.statusTextMessage = options.statusText || '';
-		this._message = options.message;
-		this._meta = options.metadata || {};
-		this._errors = options.errors || {};
+	if (data !== null && data !== undefined) {
+		payload.data = data;
 	}
 
-	/**
-	 * Internal build logic for consistent response shape
-	 */
-	private buildBody() {
-		if (this._isManualBody) return this.body;
+	if (ops.errors && Object.keys(ops.errors).length > 0) {
+		for (const k in ops.errors) {
+			const v = ops.errors[k];
+			if (v) ops.errors[k] = Array.isArray(v) ? v : [v];
+		}
+		payload.errors = ops.errors;
+	}
 
-		//! 204 tidak boleh punya body
-		if (this.statusCode === 204) {
-			return null;
+	if (ops.metadata && Object.keys(ops.metadata).length > 0) {
+		payload.metadata = ops.metadata;
+	}
+
+	return Bun.JSON5.stringify(payload);
+}
+
+function parseOps(initOrStatus: IResponseOptions | number = {}): IResponseOptions {
+    if (typeof initOrStatus === 'number') return { status: initOrStatus };
+    return initOrStatus;
+}
+
+export const Responder = {
+	send(data: any, initOrStatus: IResponseOptions | number = {}) {
+		const ops = parseOps(initOrStatus);
+		const status = ops.status || 200;
+		const headers = (ops.headers || {}) as any;
+
+		if (!headers['Content-Type'] && !headers['content-type']) {
+			headers['Content-Type'] = 'application/json; charset=utf-8';
 		}
 
-		const payload: any = {
-			success: this.statusCode >= 200 && this.statusCode < 300,
-			message:
-				this._message ?? DEFAULT_MESSAGES[this.statusCode] ?? 'Unknown Status',
-		};
-
-		if (this._data !== null && this._data !== undefined) {
-			payload.data = this._data;
-		}
-
-		if (this._errors && Object.keys(this._errors).length > 0) {
-			for (const k in this._errors) {
-				const v = this._errors[k];
-				if (v) this._errors[k] = Array.isArray(v) ? v : [v];
-			}
-			payload.errors = this._errors;
-		}
-
-		payload.metadata = {
-			requestId: Logger.response.requestId, // ! Sementara langsung ambil dari Logger, karna requestId di set pertama kali ketika ada request
-			timestamp: new Date().toISOString(),
-		};
-
-		if (this._meta && Object.keys(this._meta).length > 0) {
-			payload.metadata = {
-				...payload.metadata,
-				...this._meta,
-			};
-		}
-
-		return JSON.stringify(payload);
-	}
-
-	/**
-	 * Used by Gaman engine to get the finalized response body
-	 */
-	getFinalBody() {
-		return this.buildBody();
-	}
-
-	// ==========================================
-	// FLUENT METHODS (Chaining)
-	// ==========================================
-
-	message(msg: string): this {
-		this._message = msg;
-		return this;
-	}
-
-	meta(metaData: Record<string, any>): this {
-		this._meta = { ...this._meta, ...metaData };
-		return this;
-	}
-
-	status(code: number): this {
-		this.statusCode = code;
-		return this;
-	}
-
-	statusText(text: string): this {
-		this.statusTextMessage = text;
-		return this;
-	}
-
-	header(key: string, value: string): this {
-		this.headers.set(key, value);
-		return this;
-	}
-
-	error(errors: Record<string, string | string[]>, message?: string): this {
-		this.statusCode = this.statusCode >= 400 ? this.statusCode : 400;
-		this._data = null;
-		this._message = message || this._message;
-		this._errors = errors;
-		return this;
-	}
-
-	// ==========================================
-	// STATIC FACTORY METHODS
-	// ==========================================
-
-	static send(
-		data: any,
-		initOrStatus: IResponseOptions | number = {},
-	): Responder {
-		const ops: IResponseOptions =
-			typeof initOrStatus === 'number'
-				? { status: initOrStatus }
-				: initOrStatus;
-
-		const res = new Responder(data, ops);
-
-		if (!res.headers.has('Content-Type')) {
-			res.headers.set('Content-Type', 'application/json; charset=utf-8');
-		}
-
-		return res;
-	}
-
-	static message(msg: string, initOrStatus: IResponseOptions | number = {}) {
-		const ops: IResponseOptions =
-			typeof initOrStatus === 'number'
-				? { status: initOrStatus }
-				: initOrStatus;
-
-		const res = new Responder(undefined, {
-			...ops,
-			message: msg,
+		return new Response(buildPayload(status, data, ops), {
+			status,
+			statusText: ops.statusText || DEFAULT_MESSAGES[status],
+			headers,
 		});
+	},
 
-		if (!res.headers.has('Content-Type')) {
-			res.headers.set('Content-Type', 'application/json; charset=utf-8');
+	message(msg: string, initOrStatus: IResponseOptions | number = {}) {
+		const ops = parseOps(initOrStatus);
+		ops.message = msg;
+		const status = ops.status || 200;
+		const headers = (ops.headers || {}) as any;
+
+		if (!headers['Content-Type'] && !headers['content-type']) {
+			headers['Content-Type'] = 'application/json; charset=utf-8';
 		}
 
-		return res;
-	}
+		return new Response(buildPayload(status, null, ops), {
+			status,
+			statusText: ops.statusText || DEFAULT_MESSAGES[status],
+			headers,
+		});
+	},
 
-	static error(
+	error(
 		errors: Record<string, string | string[]>,
 		initOrStatus: IResponseOptions | number = {},
 	) {
-		const ops: IResponseOptions =
-			typeof initOrStatus === 'number'
-				? { status: initOrStatus }
-				: initOrStatus;
+		const ops = parseOps(initOrStatus);
+		ops.errors = errors;
+		const status = ops.status || 400;
+		const headers = (ops.headers || {}) as any;
 
-		const res = new Responder(undefined, {
-			...ops,
-		}).error(errors);
-
-		if (!res.headers.has('Content-Type')) {
-			res.headers.set('Content-Type', 'application/json; charset=utf-8');
+		if (!headers['Content-Type'] && !headers['content-type']) {
+			headers['Content-Type'] = 'application/json; charset=utf-8';
 		}
 
-		return res;
-	}
+		return new Response(buildPayload(status, null, ops), {
+			status,
+			statusText: ops.statusText || DEFAULT_MESSAGES[status],
+			headers,
+		});
+	},
 
-	static json(
-		data: any,
-		initOrStatus: IResponseOptions | number = {},
-	): Responder {
-		const ops: IResponseOptions =
-			typeof initOrStatus === 'number'
-				? { status: initOrStatus }
-				: initOrStatus;
+	json(data: any, initOrStatus: IResponseOptions | number = {}) {
+		const ops = parseOps(initOrStatus);
+		const status = ops.status || 200;
+		const headers = (ops.headers || {}) as any;
 
-		const res = new Responder(JSON.stringify(data), ops);
-
-		if (!res.headers.has('Content-Type')) {
-			res.headers.set('Content-Type', 'application/json; charset=utf-8');
+		if (!headers['Content-Type'] && !headers['content-type']) {
+			headers['Content-Type'] = 'application/json; charset=utf-8';
 		}
-		res._isManualBody = true;
-		return res;
-	}
 
-	static text(
-		message: string,
-		initOrStatus: IResponseOptions | number = {},
-	): Responder {
-		const ops: IResponseOptions =
-			typeof initOrStatus === 'number'
-				? { status: initOrStatus }
-				: initOrStatus;
+		return new Response(Bun.JSON5.stringify(data), {
+			status,
+			statusText: ops.statusText || DEFAULT_MESSAGES[status],
+			headers,
+		});
+	},
 
-		const res = new Responder(message, ops);
-		res._isManualBody = true;
-		res.body = message;
-		res.headers.set('Content-Type', 'text/plain');
-		return res;
-	}
+	text(message: string, initOrStatus: IResponseOptions | number = {}) {
+		const ops = parseOps(initOrStatus);
+		const status = ops.status || 200;
+		const headers = (ops.headers || {}) as any;
+		headers['Content-Type'] = 'text/plain';
 
-	static html(
-		body: string,
-		initOrStatus: IResponseOptions | number = {},
-	): Responder {
-		const ops: IResponseOptions =
-			typeof initOrStatus === 'number'
-				? { status: initOrStatus }
-				: initOrStatus;
+		return new Response(message, {
+			status,
+			statusText: ops.statusText || DEFAULT_MESSAGES[status],
+			headers,
+		});
+	},
 
-		const res = new Responder(body, ops);
-		res._isManualBody = true;
-		res.body = body;
-		res.headers.set('Content-Type', 'text/html');
-		return res;
-	}
+	html(body: string, initOrStatus: IResponseOptions | number = {}) {
+		const ops = parseOps(initOrStatus);
+		const status = ops.status || 200;
+		const headers = (ops.headers || {}) as any;
+		headers['Content-Type'] = 'text/html';
 
-	static render(
+		return new Response(body, {
+			status,
+			statusText: ops.statusText || DEFAULT_MESSAGES[status],
+			headers,
+		});
+	},
+
+	render(
 		viewName: string,
 		viewData: Record<string, any> = {},
 		initOrStatus: IResponseOptions = { status: 200 },
-	): Responder {
-		const res = new Responder(null, {
-			...initOrStatus,
-			headers: {
-				'Content-Type': 'text/html',
-				...(initOrStatus.headers || {}),
-			},
+	) {
+		return new ViewResponse(viewName, viewData, initOrStatus);
+	},
+
+	stream(readableStream: any, initOrStatus: IResponseOptions | number = {}) {
+		const ops = parseOps(initOrStatus);
+		const status = ops.status || 200;
+		const headers = (ops.headers || {}) as any;
+		headers['Content-Type'] = 'application/octet-stream';
+
+		return new Response(readableStream, {
+			status,
+			statusText: ops.statusText || DEFAULT_MESSAGES[status],
+			headers,
 		});
-		res._isManualBody = true;
-		res.view = new ViewResponse(viewName, viewData, initOrStatus);
-		return res;
-	}
+	},
 
-	static stream(
-		readableStream: any,
-		initOrStatus: IResponseOptions | number = {},
-	): Responder {
-		const ops: IResponseOptions =
-			typeof initOrStatus === 'number'
-				? { status: initOrStatus }
-				: initOrStatus;
+	redirect(location: string, statusNumber: number = 302) {
+		return new Response(null, {
+			status: statusNumber,
+			headers: { Location: location },
+		});
+	},
 
-		const res = new Responder(readableStream, ops);
-		res._isManualBody = true;
-		res.body = readableStream;
-		res.headers.set('Content-Type', 'application/octet-stream');
-		return res;
-	}
+	ok(data?: any) {
+		return this.send(data, { status: 200 });
+	},
 
-	static redirect(location: string, statusNumber: number = 302): Responder {
-		const res = new Responder(null, { status: statusNumber });
-		res._isManualBody = true;
-		res.headers.set('Location', location);
-		return res;
-	}
+	created(data?: any) {
+		return this.send(data, { status: 201 });
+	},
 
-	// ==========================================
-	// STATUS SHORTCUTS (FINISHERS)
-	// ==========================================
+	accepted(data?: any) {
+		return this.send(data, { status: 202 });
+	},
 
-	/**
-	 * Shorthand method to finish request with "200" status code
-	 */
-	ok(body?: any): this {
-		this.statusCode = 200;
-		if (body !== undefined) this._data = body;
-		return this;
-	}
+	noContent() {
+		return new Response(null, { status: 204 });
+	},
 
-	/**
-	 * Shorthand method to finish request with "201" status code
-	 */
-	created(body?: any): this {
-		this.statusCode = 201;
-		if (body !== undefined) this._data = body;
-		return this;
-	}
+	movedPermanently(location: string) {
+		return this.redirect(location, 301);
+	},
 
-	/**
-	 * Shorthand method to finish request with "202" status code
-	 */
-	accepted(body?: any): this {
-		this.statusCode = 202;
-		if (body !== undefined) this._data = body;
-		return this;
-	}
+	badRequest(data?: any) {
+		return this.send(data, { status: 400 });
+	},
 
-	/**
-	 * Shorthand method to finish request with "204" status code
-	 */
-	noContent(): this {
-		this.statusCode = 204;
-		this._data = null;
-		this._isManualBody = true;
-		this.body = null;
-		return this;
-	}
+	unauthorized(data?: any) {
+		return this.send(data, { status: 401 });
+	},
 
-	/**
-	 * Shorthand method to finish request with "301" status code
-	 */
-	movedPermanently(location?: string): this {
-		this.statusCode = 301;
-		if (location) this.headers.set('Location', location);
-		return this;
-	}
+	forbidden(data?: any) {
+		return this.send(data, { status: 403 });
+	},
 
-	/**
-	 * Shorthand method to finish request with "302" status code
-	 */
-	movedTemporarily(location?: string): this {
-		this.statusCode = 302;
-		if (location) this.headers.set('Location', location);
-		return this;
-	}
+	notFound(data?: any) {
+		return this.send(data, { status: 404 });
+	},
 
-	/**
-	 * Shorthand method to finish request with "400" status code
-	 */
-	badRequest(body?: any): this {
-		this.statusCode = 400;
-		if (body !== undefined) this._data = body;
-		return this;
-	}
+	methodNotAllowed() {
+		return new Response(null, { status: 405 });
+	},
 
-	/**
-	 * Shorthand method to finish request with "401" status code
-	 */
-	unauthorized(body?: any): this {
-		this.statusCode = 401;
-		if (body !== undefined) this._data = body;
-		return this;
-	}
+	tooManyRequests(data?: any) {
+		return this.send(data, { status: 429 });
+	},
 
-	/**
-	 * Shorthand method to finish request with "403" status code
-	 */
-	forbidden(body?: any): this {
-		this.statusCode = 403;
-		if (body !== undefined) this._data = body;
-		return this;
-	}
-
-	/**
-	 * Shorthand method to finish request with "404" status code
-	 */
-	notFound(body?: any): this {
-		this.statusCode = 404;
-		if (body !== undefined) this._data = body;
-		return this;
-	}
-
-	/**
-	 * Shorthand method to finish request with "405" status code
-	 */
-	methodNotAllowed(): this {
-		this.statusCode = 405;
-		return this;
-	}
-
-	/**
-	 * Shorthand method to finish request with "429" status code
-	 */
-	tooManyRequests(body?: any): this {
-		this.statusCode = 429;
-		if (body !== undefined) this._data = body;
-		return this;
-	}
-
-	/**
-	 * Shorthand method to finish request with "500" status code
-	 */
-	internalServerError(body?: any): this {
-		this.statusCode = 500;
-		if (body !== undefined) this._data = body;
-		return this;
-	}
-
-	// Static shorthands for quick access
-	static ok(data: any) {
-		return this.send(data).ok();
-	}
-	static notFound(data?: any) {
-		return this.send(data).notFound();
-	}
-}
+	internalServerError(data?: any) {
+		return this.send(data, { status: 500 });
+	},
+};

@@ -4,7 +4,7 @@ import { isExceptionHandler, isMiddleware, isRoutes } from './utils/is';
 import { createContext } from './context';
 import { Priority } from './enums';
 import { insertAndSort } from './utils/priority';
-import { Responder } from './responder';
+import { Responder, ViewResponse } from './responder';
 import { IGNORED_LOG_FOR_PATH_REGEX } from './contants';
 import { Logger } from './utils/logger';
 import { Michi } from '@gaman/michi';
@@ -36,20 +36,27 @@ export class Gaman {
 	 * @returns
 	 */
 	private async handleResponse(
-		responder: Responder | undefined,
+		responder: Response | ViewResponse | any,
 		ctx?: Context,
 	) {
-		let finalResponse = responder
-			? new Response(responder.getFinalBody(), {
-					headers: responder.headers.toRecord(),
-					status: responder.statusCode,
-					statusText: responder.statusTextMessage,
-				})
-			: new Response('Not Found', { status: 404 });
+		let finalResponse: Response;
 
-		if (ctx) {
-			for (const [key, [value, isSet]] of ctx.headers.entries()) {
-				if (isSet && value) {
+		if (responder instanceof Response) {
+			finalResponse = responder;
+		} else if (responder instanceof ViewResponse) {
+			// Resolve view if registered, otherwise 500
+			finalResponse = new Response(`View rendering not implemented natively yet. View: ${responder.getName()}`, { status: 500 });
+		} else if (typeof responder === 'object' && responder !== null && !Buffer.isBuffer(responder)) {
+			finalResponse = Responder.json(responder);
+		} else if (responder === undefined) {
+			finalResponse = new Response('Not Found', { status: 404 });
+		} else {
+			finalResponse = Responder.text(String(responder));
+		}
+
+		if (ctx && typeof (ctx.headers as any).getSetHeaders === 'function') {
+			for (const [key, value] of (ctx.headers as any).getSetHeaders()) {
+				if (value) {
 					finalResponse.headers.set(
 						key,
 						Array.isArray(value) ? value.join(', ') : value,
@@ -96,25 +103,25 @@ export class Gaman {
 
 			const match = this.michi.find(req.method, pathname);
 			if (!match) return new Response(undefined, { status: 404 });
-			const ctx = await createContext(req, pathname, match.params);
+			const ctx = createContext(req, pathname, match.params);
 			ctx.headers.set('X-Request-ID', ctx.request.id); //* add request id to header
 
 			/** Set Logger metadata */
-			Logger.setRequestId(ctx.request.id);
-			Logger.setRoute(pathname || '/');
-			Logger.setMethod(method);
+			// Removed stateful logger calls
 
 			const handlers = match.data.pipeline;
 			let idx = 0;
 			const next = async () => {
 				const fn = handlers[idx++];
-				if (!fn) return new Responder(undefined, { status: 404 });
+				if (!fn) return Responder.notFound();
 				return await fn(ctx, next);
 			};
 
+			let finalResponse: Response | undefined;
 			try {
 				const result = await next();
-				return await app.handleResponse(result, ctx);
+				finalResponse = await app.handleResponse(result, ctx);
+				return finalResponse;
 			} catch (err: any) {
 				const handler =
 					match.data.exceptionHandler || this.globalExceptionHandler;
@@ -122,32 +129,32 @@ export class Gaman {
 				if (handler) {
 					try {
 						const exceptionRes = await handler(err, ctx);
-						return await app.handleResponse(exceptionRes, ctx);
+						finalResponse = await app.handleResponse(exceptionRes, ctx);
+						return finalResponse;
 					} catch (fatal) {
-						return new Response('Fatal Server Error', { status: 500 });
+						finalResponse = new Response('Fatal Server Error', { status: 500 });
+						return finalResponse;
 					}
 				}
 
 				Logger.error(err);
-				return await app.handleResponse(
-					new Responder(undefined, { status: 500 }),
+				finalResponse = await app.handleResponse(
+					Responder.error({}, { status: 500 }),
 					ctx,
 				);
+				return finalResponse;
 			} finally {
 				const endTime = performance.now();
-				if (
-					Logger.response.route &&
-					Logger.response.status &&
-					Logger.response.method &&
-					!IGNORED_LOG_FOR_PATH_REGEX.test(Logger.response.route)
-				) {
-					Logger.log(
-						`Request processed in §a(${(endTime - startTime).toFixed(1)}ms)§r`,
-					);
+				if (!IGNORED_LOG_FOR_PATH_REGEX.test(pathname || '/')) {
+					if (Logger.shouldLog('info')) {
+						const statusColor = Logger.getStatusColor(finalResponse ? finalResponse.status : 500);
+						const statusText = Logger.getStatusText(finalResponse ? finalResponse.status : 500);
+						const statusStr = finalResponse ? finalResponse.status : 500;
+						Logger.info(
+							`§8[§6${ctx.request.id}§8] §8[§d${method}§8] §f${pathname || '/'} §8[${statusColor}${statusStr} ${statusText}§8] §rRequest processed in §a(${(endTime - startTime).toFixed(1)}ms)§r`,
+						);
+					}
 				}
-				Logger.setRoute('');
-				Logger.setMethod('');
-				Logger.setStatus(null);
 			}
 		};
 

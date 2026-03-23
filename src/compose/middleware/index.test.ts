@@ -37,7 +37,7 @@ describe('composeMiddleware', () => {
 	});
 
 	it('result is next in middleware', async () => {
-		const res = new Responder();
+		const res = Responder.ok();
 		expect(await middleware.handler({} as any, () => res)).toEqual(res);
 	});
 });
