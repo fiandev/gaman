@@ -10,9 +10,10 @@
 
 <p align="center">
   <p align="center">
-  <strong>A Lean Framework for Heavy-Duty Enterprise Performance.</strong> 
+  <strong>A Lean Framework for Enterprise Scalability.</strong> 
   </br>
-  <i>"Complexity doesn't have to be heavy."</i>
+  <i>"Complexity doesn't have to be heavy.</i></br>
+  <i>Built on <strong>Bun</strong>, designed for <strong>Logic</strong>, optimized for <strong>Scale</strong>."</i>
 </p>
 
 <p align="center">
@@ -40,6 +41,11 @@
 </p>
 
 <hr/>
+
+## The Lean Manifesto
+- **Zero Magic:** All data flows are transparent (Logic-first).
+- **Native Speed:** Maximizing Bun & Gaman Wire.
+- **Opt-in Complexity** Go enterprise scale only when you need it.
 
 ## Create a New Project
 
