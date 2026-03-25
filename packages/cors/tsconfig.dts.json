@@ -8,35 +8,37 @@
     "module": "ES2022",
     "rootDir": "./src",
     "outDir": "./dist",
+		
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "declaration": true,
     "emitDeclarationOnly": true,
+		"baseUrl": ".",
     "paths": {
       "gaman": [
-        "./src/index.ts"
+        "../../dist/index.d.ts"
       ],
       "gaman/types": [
-        "./src/types.ts"
+        "../../dist/types.d.ts"
       ],
       "gaman/responder": [
-        "./src/responder.ts"
+        "../../dist/responder.d.ts"
       ],
       "gaman/compose": [
-        "./src/compose/index.ts"
+        "../../dist/compose/index.d.ts"
       ],
       "gaman/utils": [
-        "./src/utils/index.ts"
+        "../../dist/utils/index.d.ts"
       ],
       "gaman/formdata": [
-        "./src/context/formdata/index.ts"
+        "../../dist/context/formdata/index.d.ts"
       ],
       "gaman/header": [
-        "./src/context/header/index.ts"
+        "../../dist/context/header/index.d.ts"
       ],
       "gaman/enums": [
-        "./src/enums/index.ts"
+        "../../dist/enums/index.d.ts"
       ]
     }
   },
