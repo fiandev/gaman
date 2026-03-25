@@ -1,7 +1,7 @@
 {
 	"name": "gaman",
 	"description": "A Lean Framework for Heavy-Duty Enterprise Performance.",
-	"version": "2.0.4",
+	"version": "2.1.0",
 	"author": {
 		"name": "Angga7Togk",
 		"url": "https://github.com/angga7togk"
@@ -80,6 +80,6 @@
 		"typescript": "^5.9.3"
 	},
 	"peerDependencies": {
-		"@gaman/michi": "^0.1.2"
+		"@gaman/michi": "^0.1.3"
 	}
 }
