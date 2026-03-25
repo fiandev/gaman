@@ -3,7 +3,6 @@ import { composeMiddleware } from '..';
 import {
 	IS_MIDDLEWARE_HANDLER,
 } from '../../contants';
-import { Responder } from '../../responder';
 
 const middleware = composeMiddleware(
 	(ctx, next) => {
@@ -24,7 +23,7 @@ describe('composeMiddleware', () => {
 	});
 
 	it('result is next in middleware', async () => {
-		const res = Responder.ok();
+		const res = "Hello World";
 		expect(await middleware({} as any, () => res)).toEqual(res);
 	});
 });

@@ -12,6 +12,7 @@ export const IS_EXCEPTION_HANDLER = '___is:exception___';
 export const IS_WEBSOCKET = '___is:websocket___';
 export const IS_WEBSOCKET_HANDLER = '___is:websocket:handler___';
 export const IS_WEBSOCKET_MIDDLEWARE = '___is:websocket:middleware___';
+export const IS_GAMAN_RESPONSE_BUILDER = '___is:gaman:response:builder___';
 
 /* -------------------------------------------------------------------------- */
 /*                                   HANDLER                                  */

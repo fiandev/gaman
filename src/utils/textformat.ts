@@ -46,62 +46,10 @@ export const TextFormat = {
   BG_LIGHT_YELLOW: '\x1b[48;5;228m',
   BG_BRIGHT_WHITE: '\x1b[48;5;255m',
 
-  format(text: string): string {
-    const fgMap: Record<string, string> = {
-      '0': TextFormat.BLACK,
-      '1': TextFormat.BLUE,
-      '2': TextFormat.GREEN,
-      '3': TextFormat.CYAN,
-      '4': TextFormat.RED,
-      '5': TextFormat.MAGENTA,
-      '6': TextFormat.YELLOW,
-      '7': TextFormat.WHITE,
-      '8': TextFormat.GRAY,
-      '9': TextFormat.LIGHT_BLUE,
-      a: TextFormat.LIGHT_GREEN,
-      b: TextFormat.CYAN,
-      c: TextFormat.LIGHT_RED,
-      d: TextFormat.LIGHT_PURPLE,
-      e: TextFormat.LIGHT_YELLOW,
-      f: TextFormat.BRIGHT_WHITE,
-    };
 
-    const bgMap: Record<string, string> = {
-      '0': TextFormat.BG_BLACK,
-      '1': TextFormat.BG_BLUE,
-      '2': TextFormat.BG_GREEN,
-      '3': TextFormat.BG_CYAN,
-      '4': TextFormat.BG_RED,
-      '5': TextFormat.BG_MAGENTA,
-      '6': TextFormat.BG_YELLOW,
-      '7': TextFormat.BG_WHITE,
-      '8': TextFormat.BG_GRAY,
-      '9': TextFormat.BG_LIGHT_BLUE,
-      a: TextFormat.BG_LIGHT_GREEN,
-      b: TextFormat.BG_CYAN,
-      c: TextFormat.BG_LIGHT_RED,
-      d: TextFormat.BG_LIGHT_PURPLE,
-      e: TextFormat.BG_LIGHT_YELLOW,
-      f: TextFormat.BG_BRIGHT_WHITE,
-    };
-
-    const styleMap: Record<string, string> = {
-      l: TextFormat.BOLD,
-      n: TextFormat.UNDERLINE,
-      o: TextFormat.ITALIC,
-      m: TextFormat.STRIKETHROUGH,
-      k: '', // Obfuscated: tidak didukung
-      r: TextFormat.RESET,
-    };
-
-    return (
-      text
-        // Background: §bX
-        .replace(/§b([0-9a-f])/gi, (_, c) => bgMap[c.toLowerCase()] ?? '')
-        // Foreground: §X
-        .replace(/§([0-9a-f])/gi, (_, c) => fgMap[c.toLowerCase()] ?? '')
-        // Style: §l §n §o §m §r
-        .replace(/§([lnomkr])/gi, (_, c) => styleMap[c.toLowerCase()] ?? '')
-    );
-  },
 };
+
+export function colorize(color: keyof Omit<typeof TextFormat, 'colorize'>, text: string): string {
+  const code = TextFormat[color];
+  return `${code}${text}${TextFormat.RESET}`;
+}

@@ -226,7 +226,60 @@ export type Context = Gaman.Context & {
 	 * @returns A typed JSON object.
 	 */
 	json: <T = any>() => Promise<T>;
+
+	/**
+	 * Redirects the request to a different URL.
+	 * @example return ctx.redirect("https://google.com");
+	 * @param url The URL to redirect to.
+	 * @param status The status code (default: 302).
+	 */
+	redirect: (url: string, status?: number) => Response;
+
+	/**
+	 * Send a response to the client.
+	 * @param data The data to send.
+	 * @param status The status code (default: 200).
+	 * @returns A GamanResponseBuilder for further customization.
+	 */
+	send: (data?: any, status?: number) => GamanResponseBuilder;
 };
+
+/**
+ * Fluent interface to finalize and return a Fetch Response.
+ * Documentation: https://developer.mozilla.org/en-US/docs/Web/API/Response
+ */
+export interface GamanResponseBuilder {
+	/** 200 OK - Standard success */
+	ok(): Response;
+	/** 201 Created - Resource successfully created */
+	created(): Response;
+	/** 202 Accepted - Request received but still processing */
+	accepted(): Response;
+	/** 204 No Content - Success with no body */
+	noContent(): Response;
+	/** 400 Bad Request - Client side error */
+	badRequest(message?: string): Response;
+	/** 401 Unauthorized - Authentication required */
+	unauthorized(message?: string): Response;
+	/** 403 Forbidden - Authenticated but no permission */
+	forbidden(message?: string): Response;
+	/** 404 Not Found - Resource does not exist */
+	notFound(message?: string): Response;
+	/** 409 Conflict - Resource already exists or conflict state */
+	conflict(message?: string): Response;
+	/** 422 Unprocessable Entity - Validation errors */
+	unprocessable(errors?: any, message?: string): Response;
+	/** 429 Too Many Requests - Rate limiting */
+	tooManyRequests(message?: string): Response;
+	/** 500 Internal Server Error - Panic/Crash */
+	error(message?: string): Response;
+	/**
+	 * Build a custom response with the specified status code and body.
+	 * @param status The HTTP status code (default: 200).
+	 * @returns A Response object.
+	 */
+	build(status: number): Response;
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                   ROUTER                                   */

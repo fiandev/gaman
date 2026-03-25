@@ -7,6 +7,7 @@ import { CookieMap } from 'bun';
 import { GamanHeader } from './header';
 import { randomId } from '../utils/utils';
 import type { Context } from '../types';
+import { buildResponse } from '../responder';
 
 export function createContext(
 	req: Request,
@@ -115,6 +116,7 @@ export function createContext(
 		delete(k) {
 			delete dataSet[k];
 		},
+		send: buildResponse,
 
 		// @ts-ignore
 		[HTTP_REQUEST_METADATA]: req,

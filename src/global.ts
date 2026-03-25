@@ -1,11 +1,8 @@
-import { Responder } from './responder.js';
 import { Logger } from './utils/logger.js';
 
-globalThis.Res = Responder;
 globalThis.Log = Logger;
 
 declare global {
-	var Res: typeof import('./responder.js').Responder;
 	var Log: typeof import('./utils/logger.js').Logger;
 
 	namespace Bun {

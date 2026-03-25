@@ -1,5 +1,4 @@
 import { TextFormat } from './textformat';
-import { appendFile } from 'node:fs/promises';
 
 export const Logger = {
 	level: 'debug' as 'info' | 'debug' | 'warn' | 'error',
@@ -22,31 +21,31 @@ export const Logger = {
 		const time = Logger.getShortTime();
 
 		const colorPrefix: Record<typeof type, string> = {
-			info: '§a[INFO~]',
-			debug: '§b[DEBUG]',
-			warn: '§e[WARN~]',
-			error: '§c[ERROR]',
+			info: TextFormat.GREEN + '[INFO~]',
+			debug: TextFormat.CYAN + '[DEBUG]',
+			warn: TextFormat.YELLOW + '[WARN~]',
+			error: TextFormat.RED + '[ERROR]',
 		};
 
 		const color: Record<typeof type, string> = {
-			info: '§r',
-			debug: '§b',
-			warn: '§e',
-			error: '§c',
+			info: TextFormat.WHITE,
+			debug: TextFormat.CYAN,
+			warn: TextFormat.YELLOW,
+			error: TextFormat.RED,
 		};
 
-		const text = `${colorPrefix[type]} §8[${time}]`;
+		const text = `${colorPrefix[type]} ${TextFormat.GRAY}[${time}]`;
 
 		msg = [
-			TextFormat.format(text) + TextFormat.format(color[type]),
+			text + color[type],
 			...msg.map((m) => {
 				if (m instanceof Error) {
-					return TextFormat.format('§7' + (m.stack || m.message));
+					return TextFormat.WHITE + (m.stack || m.message);
 				}
 				if (typeof m === 'object') {
-					return TextFormat.format('§7' + JSON.stringify(m, null, 2));
+					return TextFormat.WHITE + JSON.stringify(m, null, 2);
 				}
-				return TextFormat.format('§7' + String(m));
+				return TextFormat.WHITE + String(m);
 			}),
 			TextFormat.RESET,
 		];
