@@ -2,7 +2,7 @@ import { CookieMap } from 'bun';
 import { GamanHeader } from './context/header';
 import { GFile } from './context/formdata/file';
 import type { ControllerFactory } from './compose/controller';
-import type { Middleware, MiddlewareHandler } from './compose/middleware';
+import type {  MiddlewareHandler } from './compose/middleware';
 import { FormData } from './context/formdata';
 import type { ExceptionHandler } from './compose';
 
@@ -255,7 +255,7 @@ export interface Route {
 	path: string;
 	methods: string[];
 	handler: RequestHandler | null;
-	middlewares: Middleware[];
+	middlewares: MiddlewareHandler[];
 	exceptionHandler: ExceptionHandler | null;
 	pipes: Array<MiddlewareHandler | RequestHandler>;
 	name?: string;
@@ -269,7 +269,7 @@ export type Routes = Array<Route>;
  * like : route.get(...).middleware(...).exception(...)
  */
 export type RouteDefinition = {
-	middleware(...fn: Middleware[]): RouteDefinition;
+	middleware(...fn: MiddlewareHandler[]): RouteDefinition;
 	exception(eh: ExceptionHandler): RouteDefinition;
 	name(s: string): RouteDefinition;
 };
