@@ -1,0 +1,33 @@
+name: GamanJS API Tests
+
+on:
+  push:
+    branches: ['v2', 'main']
+  pull_request:
+    branches: ['v2', 'main']
+
+jobs:
+  api-tests:
+    name: API E2E Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Remove package-lock.json (Windows)
+        if: matrix.os == 'windows-latest'
+        run: Remove-Item package-lock.json -ErrorAction SilentlyContinue
+        shell: pwsh
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run E2E API tests
+        run: bun test test/api.test.ts
