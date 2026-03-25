@@ -1,32 +1,32 @@
 {
   "GamanJS": {
-    "GET JSON (req/s)": 20488,
-    "POST Form (req/s)": 15457.6,
-    "POST File (req/s)": 2018.2
+    "GET JSON (req/s)": 20755.2,
+    "POST Form (req/s)": 19275.2,
+    "POST File (req/s)": 2057
   },
   "ExpressJS": {
-    "GET JSON (req/s)": 13421.6,
-    "POST Form (req/s)": 760,
-    "POST File (req/s)": 390.4
+    "GET JSON (req/s)": 14087.2,
+    "POST Form (req/s)": 840,
+    "POST File (req/s)": 321.2
   },
   "NestJS": {
-    "GET JSON (req/s)": 10878,
-    "POST Form (req/s)": 3686.4,
-    "POST File (req/s)": 351.8
+    "GET JSON (req/s)": 12487.2,
+    "POST Form (req/s)": 6101.2,
+    "POST File (req/s)": 381.6
   },
   "ElysiaJS": {
-    "GET JSON (req/s)": 26001.6,
-    "POST Form (req/s)": 21328.8,
-    "POST File (req/s)": 338.8
+    "GET JSON (req/s)": 30097.6,
+    "POST Form (req/s)": 27476.8,
+    "POST File (req/s)": 345.4
   },
   "AdonisJS": {
-    "GET JSON (req/s)": 2021,
-    "POST Form (req/s)": 1856.6,
-    "POST File (req/s)": 181.2
+    "GET JSON (req/s)": 2084,
+    "POST Form (req/s)": 1854.4,
+    "POST File (req/s)": 199.8
   },
   "Hono": {
-    "GET JSON (req/s)": 25630.4,
-    "POST Form (req/s)": 18657.6,
-    "POST File (req/s)": 365.4
+    "GET JSON (req/s)": 29644.8,
+    "POST Form (req/s)": 20494.41,
+    "POST File (req/s)": 343.6
   }
 }
