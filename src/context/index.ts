@@ -11,7 +11,6 @@ import type { Context } from '../types';
 export function createContext(
 	req: Request,
 	pathname: string,
-	params: Record<string, any>,
 ): Context {
 	const method = req.method.toUpperCase();
 	const headers = new GamanHeader(req.headers);
@@ -38,7 +37,7 @@ export function createContext(
 
 	const ctx: Context = {
 		path: pathname,
-		params,
+		params: Object.create(null),
 		cookies: new CookieMap(req.headers.get('cookie') ?? ''),
 		request: {
 			id: headers.get('x-request-id') || '',

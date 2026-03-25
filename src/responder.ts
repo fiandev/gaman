@@ -1,7 +1,3 @@
-import { GamanHeader } from './context/header';
-import type { Metadata } from './types';
-import { Logger } from './utils/logger';
-
 export const DEFAULT_MESSAGES: Record<number, string> = {
 	// 1xx Informational
 	100: 'Continue',
@@ -82,7 +78,7 @@ export interface GamanResponse<T = any> {
 	message: string;
 	data?: T;
 	errors?: Record<string, string[]>;
-	meta?: Metadata;
+	meta?: any;
 }
 
 export class ViewResponse {

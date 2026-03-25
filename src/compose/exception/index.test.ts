@@ -13,6 +13,6 @@ describe('composeException', () => {
 		expect(exception[IS_EXCEPTION_HANDLER]).toBeTrue();
 	});
 	it('error result is same', () => {
-		expect(exception(null as any)).toEqual(err);
+		expect(exception(null as any, {} as any)).toEqual(err);
 	});
 });

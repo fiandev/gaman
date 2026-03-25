@@ -2,7 +2,7 @@ import { CookieMap } from 'bun';
 import { GamanHeader } from './context/header';
 import { GFile } from './context/formdata/file';
 import type { ControllerFactory } from './compose/controller';
-import type {  MiddlewareHandler } from './compose/middleware';
+import type { MiddlewareHandler } from './compose/middleware';
 import { FormData } from './context/formdata';
 import type { ExceptionHandler } from './compose';
 
@@ -22,12 +22,6 @@ export type HTTPMethod =
  * Enterprise utility for cleaner dependency injection
  */
 export type RT<T extends (...args: any) => any> = ReturnType<T>;
-
-export type Metadata = {
-	requestId?: string;
-	timestamp?: string;
-	[key: string]: any;
-};
 
 /**
  * App Transportation Mode
@@ -242,9 +236,9 @@ export type RouteFactory = (route: RouterBuilder) => void;
 
 export type ComposedPipeline = Array<MiddlewareHandler | RequestHandler>;
 export interface RouteMetadata {
-  id: string;
+	id: string;
 	exceptionHandler: ExceptionHandler | null;
-  pipeline: ComposedPipeline; 
+	pipeline: ComposedPipeline;
 }
 
 

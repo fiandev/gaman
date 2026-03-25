@@ -3,7 +3,12 @@ import { appendFile } from 'node:fs/promises';
 
 export const Logger = {
 	level: 'debug' as 'info' | 'debug' | 'warn' | 'error',
-
+	levels: {
+		error: 0,
+		warn: 1,
+		info: 2,
+		debug: 3,
+	} as const,
 	log: (...msg: any[]) => Logger.info(...msg),
 
 	info: (...msg: any[]) => Logger._log('info', msg),
@@ -69,22 +74,16 @@ export const Logger = {
 	},
 
 	shouldLog: (level: 'info' | 'debug' | 'warn' | 'error') => {
-		const levels: Record<'info' | 'debug' | 'warn' | 'error', number> = {
-			error: 0,
-			warn: 1,
-			info: 2,
-			debug: 3,
-		};
-		return levels[level] <= levels[Logger.level];
+		return Logger.levels[level] <= Logger.levels[Logger.level];
 	},
 
-	setRequestId(requestId: string) {},
+	setRequestId(requestId: string) { },
 
-	setRoute(route: string) {},
+	setRoute(route: string) { },
 
-	setStatus(status: number | null) {},
+	setStatus(status: number | null) { },
 
-	setMethod(method: string) {},
+	setMethod(method: string) { },
 
 	getShortTime: () => {
 		const now = new Date();

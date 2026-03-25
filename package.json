@@ -1,11 +1,14 @@
 {
 	"name": "gaman",
 	"description": "A Lean Framework for Heavy-Duty Enterprise Performance.",
-	"version": "2.0.2",
+	"version": "2.0.4",
 	"author": {
 		"name": "Angga7Togk",
 		"url": "https://github.com/angga7togk"
 	},
+	"workspaces": [
+		"packages/*"
+	],
 	"main": "./dist/index.js",
 	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.ts",
@@ -45,6 +48,11 @@
 			"types": "./dist/context/header/index.d.ts",
 			"import": "./dist/context/header/index.mjs",
 			"require": "./dist/context/header/index.js"
+		},
+		"./enums": {
+			"types": "./dist/enums/index.d.ts",
+			"import": "./dist/enums/index.mjs",
+			"require": "./dist/enums/index.js"
 		}
 	},
 	"repository": {
