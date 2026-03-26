@@ -1,3 +1,4 @@
+import { IS_GAMAN_RESPONSE_BUILDER } from "./contants";
 import type { GamanResponseBuilder } from "./types";
 
 export const buildResponse = (data?: any): GamanResponseBuilder => {
@@ -20,6 +21,7 @@ export const buildResponse = (data?: any): GamanResponseBuilder => {
 			}
 		}
 
+
 		return new Response(body, {
 			status,
 			headers: {
@@ -28,7 +30,7 @@ export const buildResponse = (data?: any): GamanResponseBuilder => {
 		});
 	};
 
-	return {
+	const res: GamanResponseBuilder = {
 		ok: () => createRes(200),
 		created: () => createRes(201),
 		accepted: () => createRes(202),
@@ -46,4 +48,11 @@ export const buildResponse = (data?: any): GamanResponseBuilder => {
 		error: (msg) => createRes(500, { message: msg || 'Internal Server Error' }),
 		build: (c) => createRes(c),
 	};
+
+	Object.defineProperty(res, IS_GAMAN_RESPONSE_BUILDER, {
+		value: true,
+		writable: false,
+		enumerable: false,
+	})
+	return res;
 };
