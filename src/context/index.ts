@@ -5,7 +5,6 @@ import { GFile } from './formdata/file';
 import { HTTP_REQUEST_METADATA } from '../contants';
 import { CookieMap } from 'bun';
 import { GamanHeader } from './header';
-import { randomId } from '../utils/utils';
 import type { Context } from '../types';
 import { buildResponse } from '../responder';
 

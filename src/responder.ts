@@ -2,16 +2,13 @@ import { IS_GAMAN_RESPONSE_BUILDER } from "./contants";
 import type { GamanResponseBuilder } from "./types";
 
 export const buildResponse = (data?: any): GamanResponseBuilder => {
-
-
 	const createRes = (status: number, body: any = data) => {
 		let contentType;
 
-		// 1. Cek apakah ini Object (JSON)
-		if (typeof body === 'object' && body !== null && !Buffer.isBuffer(body)) {
+		if (typeof body === 'object' && body !== null && !Buffer.isBuffer(body) && !(body instanceof Blob)) {
 			return Response.json(body, { status });
 		}
-		// 2. Cek apakah ini String HTML (Ciri khas: diawali dengan '<')
+		
 		else if (typeof body === 'string') {
 			const trimmed = body.trim();
 			if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
@@ -20,7 +17,6 @@ export const buildResponse = (data?: any): GamanResponseBuilder => {
 				return new Response(new TextEncoder().encode(trimmed), { status, headers: { 'Content-Type': 'text/plain' } })
 			}
 		}
-
 
 		return new Response(body, {
 			status,
@@ -46,6 +42,7 @@ export const buildResponse = (data?: any): GamanResponseBuilder => {
 		}),
 		tooManyRequests: (msg) => createRes(429, { message: msg || 'Too Many Requests' }),
 		error: (msg) => createRes(500, { message: msg || 'Internal Server Error' }),
+		notModified: () => createRes(304),
 		build: (c) => createRes(c),
 	};
 

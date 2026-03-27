@@ -12,16 +12,16 @@ import { normalizePath } from '../utils/utils';
 export function Router(prefix: string = ''): RouterBuilder {
 	const routes: Route[] = [];
 
-	const addRoute = (
+	const addRoute = <T extends ControllerFactory>(
 		method: string | string[],
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler | [fn: T, name: keyof ReturnType<T>],
 	): RouteDefinition => {
 		let finalHandler: RequestHandler | null = null;
 		if (Array.isArray(handler)) {
 			const [fn, name] = handler;
 			const instance = fn();
-			finalHandler = instance[name] as RequestHandler;
+			finalHandler = instance[name as any] as RequestHandler;
 		} else {
 			finalHandler = handler;
 		}

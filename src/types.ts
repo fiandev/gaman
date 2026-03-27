@@ -120,7 +120,7 @@ export interface Requester {
 	body: () => Promise<Buffer<ArrayBufferLike>>;
 }
 
-export type Context = Gaman.Context & {
+export type Context = {
 	/**
 	 * Pathname portion of the URL (e.g., "/home/user"), excludes query string and host.
 	 */
@@ -228,14 +228,6 @@ export type Context = Gaman.Context & {
 	json: <T = any>() => Promise<T>;
 
 	/**
-	 * Redirects the request to a different URL.
-	 * @example return ctx.redirect("https://google.com");
-	 * @param url The URL to redirect to.
-	 * @param status The status code (default: 302).
-	 */
-	redirect: (url: string, status?: number) => Response;
-
-	/**
 	 * Send a response to the client.
 	 * @param data The data to send.
 	 * @param status The status code (default: 200).
@@ -273,6 +265,8 @@ export interface GamanResponseBuilder {
 	tooManyRequests(message?: string): Response;
 	/** 500 Internal Server Error - Panic/Crash */
 	error(message?: string): Response;
+	/** 304 Not Modified */
+	notModified(): Response;
 	/**
 	 * Build a custom response with the specified status code and body.
 	 * @param status The HTTP status code (default: 200).
@@ -358,74 +352,74 @@ export type RouterBuilder = {
 	/**
 	 * Registers a route for the HTTP GET method.
 	 */
-	get: (
+	get: <T extends ControllerFactory>(
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler | [fn: T, name: keyof ReturnType<T>],
 	) => RouteDefinition;
 
 	/**
 	 * Registers a route for the HTTP POST method.
 	 */
-	post: (
+	post: <T extends ControllerFactory>(
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler | [fn: T, name: keyof ReturnType<T>],
 	) => RouteDefinition;
 
 	/**
 	 * Registers a route for the HTTP PUT method.
 	 */
-	put: (
+	put: <T extends ControllerFactory>(
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler | [fn: T, name: keyof ReturnType<T>],
 	) => RouteDefinition;
 
 	/**
 	 * Registers a route for the HTTP DELETE method.
 	 */
-	delete: (
+	delete: <T extends ControllerFactory>(
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler | [fn: T, name: keyof ReturnType<T>],
 	) => RouteDefinition;
 
 	/**
 	 * Registers a route for the HTTP PATCH method.
 	 */
-	patch: (
+	patch: <T extends ControllerFactory>(
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler | [fn: T, name: keyof ReturnType<T>],
 	) => RouteDefinition;
 
 	/**
 	 * Registers a route that responds to all standard HTTP methods.
 	 */
-	all: (
+	all: <T extends ControllerFactory>(
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler | [fn: T, name: keyof ReturnType<T>],
 	) => RouteDefinition;
 
 	/**
 	 * Registers a route for the HTTP HEAD method.
 	 */
-	head: (
+	head: <T extends ControllerFactory>(
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler | [fn: T, name: keyof ReturnType<T>],
 	) => RouteDefinition;
 
 	/**
 	 * Registers a route for the HTTP OPTIONS method.
 	 */
-	options: (
+	options: <T extends ControllerFactory>(
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler | [fn: T, name: keyof ReturnType<T>],
 	) => RouteDefinition;
 
 	/**
 	 * Registers a route for a specific set of HTTP methods.
 	 */
-	match: (
+	match: <T extends ControllerFactory>(
 		methods: HTTPMethod[],
 		path: string,
-		handler: RequestHandler | [fn: ControllerFactory, name: string],
+		handler: RequestHandler | [fn: T, name: keyof ReturnType<T>],
 	) => RouteDefinition;
 
 	/* -------------------------------------------------------------------------- */
