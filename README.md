@@ -43,6 +43,7 @@
 <hr/>
 
 ## The Lean Manifesto
+
 - **Zero Magic:** All data flows are transparent (Logic-first).
 - **Native Speed:** Maximizing Bun & Gaman Wire.
 - **Opt-in Complexity** Go enterprise scale only when you need it.
@@ -55,9 +56,37 @@ GamanJS currently only supports Bun runtime.
 bun create gaman@latest
 ```
 
+## GamanJS Project Structure 🏗️
+
+GamanJS embraces the **Feature-Based Modularity** philosophy. This structure is designed to keep applications clean, easy to test, and scalable as your business expands.
+
+### Arsitektur Proyek Enterprise
+In a production scale or **Enterprise** project, the GamanJS folder structure will look like this:
+```
+src/
+├── index.ts                 # The Orchestrator (Entry Point)
+├── database/               # Database Configuration
+└── modules/                 # Powerhouse of your Application
+    ├── app/                 # Infrastructure Module (Global/Shared)
+    │   ├── controllers/     # Handlers for Global Requests (Health, Index)
+    │   │   └── AppController.ts
+    │   ├── services/        # Shared Utilities & System Services
+    │   │   └── AppService.ts
+    │   └── AppRouter.ts     # Global Middleware & Base Routing
+    │
+    └── user/                # Feature Module (Example: User Management)
+        ├── controllers/     # Request Handlers (Login, Register, Profile)
+        │   └── UserController.ts
+        ├── services/        # Business Logic (Auth Logic, User CRUD)
+        │   └── UserService.ts
+        ├── models/          # Data Access Layer (Powered by @gaman/orm)
+        │   └── UserModel.ts
+        └── UserRouter.ts    # Scoped Routes & Feature Middleware
+```
+
 ## Documentation
 
-visit our [Wiki](https://github.com/GamanJS/gaman/wiki)
+visit our [https://gamanjs.github.io/](https://gamanjs.github.io/)
 
 ## Star History
 
@@ -76,10 +105,6 @@ visit our [Wiki](https://github.com/GamanJS/gaman/wiki)
 ## Contributing
 
 **New Contributing welcome!** Check out our [Contributing Guide](CONTRIBUTING.md) for help getting started.
-
-## Donate
-
-- [Saweria](https://saweria.co/angga7togkk1)
 
 ## Links
 
