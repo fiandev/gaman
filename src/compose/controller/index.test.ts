@@ -4,7 +4,7 @@ import { IS_CONTROLLER } from '../../contants';
 
 const controller = composeController(() => ({
 	Create(ctx) {
-		return Res.send('ok');
+		return ctx.send('ok');
 	},
 }));
 

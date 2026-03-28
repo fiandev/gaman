@@ -433,4 +433,11 @@ export type RouterBuilder = {
 		groupPrefix: string,
 		callback: (r: RouterBuilder) => void,
 	) => RouteDefinition;
+
+	/**
+	 * Inject Services to Controller Context
+	 */
+	service: (services: Record<string, any>) => Omit<RouterBuilder, 'service'>;
+
+
 };

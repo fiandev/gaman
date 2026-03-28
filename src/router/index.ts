@@ -1,5 +1,4 @@
-import { composeException } from '../compose';
-import type { ControllerFactory } from '../compose/controller/index';
+import { composeException, type ControllerFactory } from '../compose';
 import type {
 	RequestHandler,
 	Route,
@@ -9,7 +8,10 @@ import type {
 import { isExceptionHandler } from '../utils/is';
 import { normalizePath } from '../utils/utils';
 
-export function Router(prefix: string = ''): RouterBuilder {
+export function Router(
+	prefix: string = '',
+	currentServices: Record<string, any> = {},
+): RouterBuilder {
 	const routes: Route[] = [];
 
 	const addRoute = <T extends ControllerFactory>(
@@ -20,8 +22,9 @@ export function Router(prefix: string = ''): RouterBuilder {
 		let finalHandler: RequestHandler | null = null;
 		if (Array.isArray(handler)) {
 			const [fn, name] = handler;
-			const instance = fn();
-			finalHandler = instance[name as any] as RequestHandler;
+			const instance = fn(currentServices);
+			// @ts-ignore
+			finalHandler = instance[name] as RequestHandler;
 		} else {
 			finalHandler = handler;
 		}
@@ -66,6 +69,13 @@ export function Router(prefix: string = ''): RouterBuilder {
 	return {
 		getRoutes: () => routes,
 
+		service(newServices) {
+			const combined = { ...currentServices, ...newServices };
+			currentServices = combined;
+
+			return this;
+		},
+
 		get: (path, handler) => addRoute('GET', path, handler),
 		post: (path, handler) => addRoute('POST', path, handler),
 		put: (path, handler) => addRoute('PUT', path, handler),
@@ -79,7 +89,7 @@ export function Router(prefix: string = ''): RouterBuilder {
 
 		group: (groupPrefix, callback) => {
 			// Rekursi Router dengan prefix baru
-			const subBuilder = Router(normalizePath(`/${prefix}/${groupPrefix}`));
+			const subBuilder = Router(normalizePath(`/${prefix}/${groupPrefix}`), currentServices);
 			callback(subBuilder);
 
 			const childRoutes = subBuilder.getRoutes();

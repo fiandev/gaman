@@ -3,6 +3,11 @@ import type { MiddlewareHandler } from '../middleware';
 import { Router } from '../../router';
 import type { RequestHandler, RouterBuilder, Routes } from '../../types';
 
+export type RouterConfig = {
+	services: Record<string, any>,
+	middlewares: Array<MiddlewareHandler | RequestHandler>
+}
+
 export function composeRouter(callback: (r: RouterBuilder) => void): Routes {
 	const builder = Router();
 	callback(builder);
@@ -30,3 +35,5 @@ export function composeRouter(callback: (r: RouterBuilder) => void): Routes {
 
 	return useable_routes as Routes;
 }
+
+composeRouter((r) => {})
