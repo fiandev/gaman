@@ -19,10 +19,9 @@
 
 import { defineBootstrap } from '../../src';
 import { composeMiddleware, composeException } from '../../src/compose';
-import router from './router';
+import AppRouter from './modules/app/AppRouter';
 
 defineBootstrap(async (app) => {
-
 	// ===== Global Middleware =====
 	app.mount(
 		composeMiddleware((ctx, next) => {
@@ -34,13 +33,16 @@ defineBootstrap(async (app) => {
 	// ===== Global Exception Handler =====
 	app.mount(
 		composeException((err, ctx) => {
-			return ctx.send(
-				{ error: true, message: err instanceof Error ? err.message : 'Unknown Error' },
-			).build(500);
+			return ctx
+				.send({
+					error: true,
+					message: err instanceof Error ? err.message : 'Unknown Error',
+				})
+				.build(500);
 		}),
 	);
 
-	app.mount(router); // ? register app router
+	app.mount(AppRouter); // ? register app router
 
 	app.mountServer({ http: 3431 });
 });

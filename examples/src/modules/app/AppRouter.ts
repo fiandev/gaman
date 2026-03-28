@@ -16,15 +16,27 @@
  * ==========================================================================
  */
 
-import { composeRouter, composeMiddleware, composeException } from '../../src/compose';
-import AppController from './module/controllers/AppController';
+import {
+	composeRouter,
+	composeMiddleware,
+	composeException,
+} from '../../../../src/compose';
+import AppController from './controllers/AppController';
+import { AppService } from './services/AppService';
 
 export default composeRouter((r) => {
-
-	// ===== Controller + Service Based =====
-	r.get('/', [AppController, 'HelloWorld']);
-	r.get('/users/:id', [AppController, 'GetUser']);
-	r.post('/items', [AppController, 'CreateItem']);
+  
+  // ===== Inject Services to all Controllers =====
+  r.mountService({
+    appService: AppService(),
+	});
+  
+  // ===== Controller + Service Based =====
+	r.group('/', (r) => {
+		r.get('/', [AppController, 'HelloWorld']);
+		r.get('/users/:id', [AppController, 'GetUser']);
+		r.post('/items', [AppController, 'CreateItem']);
+	});
 
 	// ===== Inline Handler: Simple Text =====
 	r.get('/ping', (ctx) => {
@@ -33,10 +45,12 @@ export default composeRouter((r) => {
 
 	// ===== Inline Handler: Query Params =====
 	r.get('/search', (ctx) => {
-		return ctx.send({
-			q: ctx.query.q,
-			page: ctx.query.page || '1',
-		}).ok();
+		return ctx
+			.send({
+				q: ctx.query.q,
+				page: ctx.query.page || '1',
+			})
+			.ok();
 	});
 
 	// ===== Inline Handler: JSON Body =====
@@ -55,11 +69,13 @@ export default composeRouter((r) => {
 	// ===== Inline Handler: File Upload =====
 	r.post('/upload', async (ctx) => {
 		const file = await ctx.file('document');
-		return ctx.send({
-			fileInfo: file
-				? { filename: file.filename, size: file.size, type: file.mimeType }
-				: null,
-		}).ok();
+		return ctx
+			.send({
+				fileInfo: file
+					? { filename: file.filename, size: file.size, type: file.mimeType }
+					: null,
+			})
+			.ok();
 	});
 
 	// ===== Deliberate Error for Global Exception =====
@@ -102,18 +118,18 @@ export default composeRouter((r) => {
 			return ctx.send({ v1: true, data: body }).ok();
 		});
 	})
-	.middleware(
-		composeMiddleware((ctx, next) => {
-			const token = ctx.header('x-api-key');
-			if (token === 'secret-key') {
-				ctx.set('auth', 'v1-user');
-			}
-			return next();
-		}),
-	)
-	.exception(
-		composeException((err, ctx) => {
-			return ctx.send({ v1Error: true, msg: err.message }).build(403);
-		}),
-	);
+		.middleware(
+			composeMiddleware((ctx, next) => {
+				const token = ctx.header('x-api-key');
+				if (token === 'secret-key') {
+					ctx.set('auth', 'v1-user');
+				}
+				return next();
+			}),
+		)
+		.exception(
+			composeException((err, ctx) => {
+				return ctx.send({ v1Error: true, msg: err.message }).build(403);
+			}),
+		);
 });

@@ -18,12 +18,15 @@
  * ==========================================================================
  */
 
-import { composeController } from '../../../../src/compose';
-import AppService from '../services/AppService';
-import type { RT } from '../../../../src/types';
+import { composeController } from '../../../../../src/compose';
+import { AppService } from '../services/AppService';
+
+export type Deps = {
+	appService: AppService;
+}
 
 export default composeController(
-	(appService: RT<typeof AppService> = AppService()) => ({
+	({ appService }: Deps) => ({
 		HelloWorld(ctx) {
 			return ctx.send({
 				message: appService.WelcomeMessage()

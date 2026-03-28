@@ -60,7 +60,7 @@ describe('Controller + Service routes', () => {
 		const res = await fetch(`${BASE}/items`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ title: 'Test Item' }),
+			body: JSON.stringify({ title: 'Test Item'}),
 		});
 		expect(res.status).toBe(201);
 		const body = await res.json();

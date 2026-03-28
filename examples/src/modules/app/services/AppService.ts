@@ -1,6 +1,7 @@
-import { composeService } from '../../../../src/compose';
+import { composeService } from '../../../../../src/compose';
+import { RT } from '../../../../../src/types';
 
-export default composeService(() => ({
+export const AppService =  composeService(() => ({
 	WelcomeMessage() {
 		return '❤️ Welcome to GamanJS';
 	},
@@ -11,3 +12,5 @@ export default composeService(() => ({
 		return { ...data, id: Date.now(), created: true };
 	},
 }));
+
+export type AppService = RT<typeof AppService>;

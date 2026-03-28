@@ -1,22 +1,40 @@
-import { composeException, composeMiddleware, composeRouter } from '../src/compose';
+import { composeException, composeRouter } from '../src/compose';
 import { defineBootstrap } from '../src/index';
-import { Cors } from "../packages/cors/src";
-const routes = composeRouter((app) => {
-	app.get('/', (ctx) => {
-		return "<h1>anu</h1>"
-	})
+import { Cors } from '../packages/cors/src';
+import { StaticServe } from '../packages/static/src';
+import AppController from './AppController';
+import { AppService } from './AppServices';
+
+const childRouter = composeRouter((r) => {
+	r.mountService({
+		appService: AppService(),
+	});
+	r.mountMiddleware((ctx, next) => {
+		console.log('ahahhha');
+		return next();
+	});
+	r.group('/child', (r) => {
+		r.get('/', [AppController, 'ANu']);
+	});
+});
+
+const routes = composeRouter((r) => {
+	r.mountRouter('/v1', childRouter);
+
+	r.get('/', [AppController, 'ANu']);
 });
 
 defineBootstrap((app) => {
 	// app.mount(Cors({
 	// 	allowHeaders: ['content-type']
 	// }));
-	app.mount(routes);
 	app.mount(
-		composeException((err, ctx) => {
-			console.log('HWEHEHEHEE', err);
+		StaticServe({
+			publicPath: 'test/public',
 		}),
 	);
+	app.mount(Cors());
+	app.mount(routes);
 	app.mountServer({
 		http: {
 			port: 3431,
