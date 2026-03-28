@@ -1,6 +1,6 @@
 import './global';
 
-import { isExceptionHandler, isGamanResponseBuilder, isMiddlewareHandler, isRoutes } from './utils/is';
+import { isExceptionHandler, isGamanResponseBuilder, isMiddlewareHandler, isComposeRouter } from './utils/is';
 import { createContext } from './context';
 import { Logger } from './utils/logger';
 import { Michi } from '@gaman/michi';
@@ -12,7 +12,7 @@ import type {
 	RouteMetadata,
 	Routes,
 } from './types';
-import type { ExceptionHandler, MiddlewareHandler } from './compose/index';
+import type { ExceptionHandler, MiddlewareHandler, Router } from './compose/index';
 import { buildResponse } from './responder';
 import { TextFormat } from './utils/textformat';
 
@@ -198,14 +198,14 @@ export class Gaman {
 	}
 
 
-	public mount(s: ExceptionHandler | MiddlewareHandler | Routes) {
+	public mount(s: ExceptionHandler | MiddlewareHandler | Router) {
 		if (isExceptionHandler(s)) this.globalExceptionHandler = s;
 		if (isMiddlewareHandler(s)) {
 			this.globalMiddlewares.push(s);
 		}
-		if (isRoutes(s)) {
+		if (isComposeRouter(s)) {
 			// * register ke michi
-			for (const rot of s) {
+			for (const rot of s()) {
 				for (const method of rot.methods) {
 					if (rot.handler !== null) {
 						this.michi.add(method, rot.path, {

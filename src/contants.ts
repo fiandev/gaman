@@ -4,7 +4,7 @@ export const SRC_DIR = 'src',
 /* -------------------------------------------------------------------------- */
 /*                                   IS WHAT?                                 */
 /* -------------------------------------------------------------------------- */
-export const IS_ROUTES: string = '___is:routes___';
+export const IS_COMPOSE_ROUTER: string = '___is:compose:router___';
 export const IS_INTEGRATION = '___is:integration___';
 export const IS_CONTROLLER = '___is:controller___';
 export const IS_INTERCEPTOR = '___is:interceptor___';

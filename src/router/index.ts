@@ -1,4 +1,9 @@
-import { composeException, type ControllerFactory } from '../compose';
+import {
+	composeException,
+	type ControllerFactory,
+	type ExceptionHandler,
+	type MiddlewareHandler,
+} from '../compose';
 import type {
 	RequestHandler,
 	Route,
@@ -11,8 +16,13 @@ import { normalizePath } from '../utils/utils';
 export function Router(
 	prefix: string = '',
 	currentServices: Record<string, any> = {},
+	parentMiddlewares: MiddlewareHandler[] = [],
+	parentException: ExceptionHandler | null = null,
 ): RouterBuilder {
 	const routes: Route[] = [];
+
+	const globalMiddlewares: MiddlewareHandler[] = [...parentMiddlewares];
+	let globalExceptionHandler: ExceptionHandler | null = parentException;
 
 	const addRoute = <T extends ControllerFactory>(
 		method: string | string[],
@@ -37,9 +47,9 @@ export function Router(
 		const routeData: Route = {
 			path: fullPath,
 			methods,
-			exceptionHandler: null,
+			exceptionHandler: globalExceptionHandler,
 			handler: finalHandler,
-			middlewares: [],
+			middlewares: [...globalMiddlewares],
 			pipes: [],
 		};
 		routes.push(routeData);
@@ -69,10 +79,28 @@ export function Router(
 	return {
 		getRoutes: () => routes,
 
-		service(newServices) {
-			const combined = { ...currentServices, ...newServices };
-			currentServices = combined;
+		mountRouter(pathPrefix, router) {
+			const subRoutes = router(pathPrefix, currentServices);
+			routes.push(...subRoutes);
+			return this;
+		},
 
+		mountService(newServices) {
+			currentServices = { ...currentServices, ...newServices };
+			return this;
+		},
+
+		mountException(exceptionHandler) {
+			if (isExceptionHandler(exceptionHandler)) {
+				globalExceptionHandler = exceptionHandler;
+			} else {
+				globalExceptionHandler = composeException(exceptionHandler);
+			}
+			return this;
+		},
+
+		mountMiddleware(...middlewares) {
+			globalMiddlewares.push(...middlewares);
 			return this;
 		},
 
@@ -89,7 +117,12 @@ export function Router(
 
 		group: (groupPrefix, callback) => {
 			// Rekursi Router dengan prefix baru
-			const subBuilder = Router(normalizePath(`/${prefix}/${groupPrefix}`), currentServices);
+			const subBuilder = Router(
+				normalizePath(`/${prefix}/${groupPrefix}`),
+				currentServices,
+				globalMiddlewares,
+				globalExceptionHandler,
+			);
 			callback(subBuilder);
 
 			const childRoutes = subBuilder.getRoutes();

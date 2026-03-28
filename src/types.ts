@@ -4,7 +4,7 @@ import { GFile } from './context/formdata/file';
 import type { ControllerFactory } from './compose/controller';
 import type { MiddlewareHandler } from './compose/middleware';
 import { FormData } from './context/formdata';
-import type { ExceptionHandler } from './compose';
+import type { ExceptionHandler, Router } from './compose';
 
 export type HTTPMethod =
 	| (string & {})
@@ -280,14 +280,12 @@ export interface GamanResponseBuilder {
 /* -------------------------------------------------------------------------- */
 export type RouteFactory = (route: RouterBuilder) => void;
 
-
 export type ComposedPipeline = Array<MiddlewareHandler | RequestHandler>;
 export interface RouteMetadata {
 	id: string;
 	exceptionHandler: ExceptionHandler | null;
 	pipeline: ComposedPipeline;
 }
-
 
 /**
  * Route Model
@@ -342,6 +340,19 @@ export type IPCOptions = {
 	 */
 	allowHalfOpen?: boolean;
 };
+
+export type RouterBuilderWithoutHttpMethods = Omit<
+	RouterBuilder,
+	| 'get'
+	| 'post'
+	| 'put'
+	| 'delete'
+	| 'patch'
+	| 'all'
+	| 'head'
+	| 'options'
+	| 'match'
+>;
 
 export type RouterBuilder = {
 	/**
@@ -437,7 +448,29 @@ export type RouterBuilder = {
 	/**
 	 * Inject Services to Controller Context
 	 */
-	service: (services: Record<string, any>) => Omit<RouterBuilder, 'service'>;
+	mountService: (
+		services: Record<string, any>,
+	) => RouterBuilderWithoutHttpMethods;
 
+	/**
+	 * Mount a global middleware to the router
+	 */
+	mountMiddleware: (
+		...middlewares: MiddlewareHandler[]
+	) => RouterBuilderWithoutHttpMethods;
 
+	/**
+	 * Mount a global exception handler to the router
+	 */
+	mountException: (
+		exceptionHandler: ExceptionHandler,
+	) => RouterBuilderWithoutHttpMethods;
+
+	/**
+	 * Mount a external module / router
+	 */
+	mountRouter: (
+		pathPrefix: string,
+		router: Router,
+	) => RouterBuilderWithoutHttpMethods;
 };

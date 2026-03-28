@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'bun:test';
 import { composeRouter } from '..';
-import { IS_ROUTES } from '../../contants';
+import { IS_COMPOSE_ROUTER } from '../../contants';
 
-const compose = composeRouter((r) => {
+const r = composeRouter((r) => {
 	r.get('/', () => {});
 	r.post('/post', () => {});
 });
+const compose = r();
 
 describe('composeRouter', () => {
 	it('is Routes', () => {
 		// @ts-ignore
-		expect(compose[IS_ROUTES]).toBeTrue();
+		expect(r[IS_COMPOSE_ROUTER]).toBeTrue();
 	});
 	it('has handler in routes', () => {
 		// @ts-ignore

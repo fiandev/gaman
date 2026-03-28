@@ -1,39 +1,44 @@
-import { IS_ROUTES } from '../../contants';
+import { IS_COMPOSE_ROUTER } from '../../contants';
 import type { MiddlewareHandler } from '../middleware';
 import { Router } from '../../router';
 import type { RequestHandler, RouterBuilder, Routes } from '../../types';
 
 export type RouterConfig = {
-	services: Record<string, any>,
-	middlewares: Array<MiddlewareHandler | RequestHandler>
-}
+	services: Record<string, any>;
+	middlewares: Array<MiddlewareHandler | RequestHandler>;
+};
 
-export function composeRouter(callback: (r: RouterBuilder) => void): Routes {
-	const builder = Router();
-	callback(builder);
+export type Router = (
+	prefix?: string,
+	services?: Record<string, any>,
+) => Routes;
 
-	const routes = builder.getRoutes();
+export function composeRouter(callback: (r: RouterBuilder) => void): Router {
+	const result: Router = (prefix = '', services = {}) => {
+		const builder = Router(prefix, services);
+		callback(builder);
 
-	const useable_routes = routes.map((r) => {
-		const pipes: Array<MiddlewareHandler | RequestHandler> = [
-			...r.middlewares,
-		];
+		const routes = builder.getRoutes();
 
-		if (r.handler) {
-			pipes.push(r.handler);
-		}
+		const useable_routes = routes.map((r) => {
+			const pipes: Array<MiddlewareHandler | RequestHandler> = [
+				...r.middlewares,
+			];
 
-		return { ...r, pipes };
-	});
+			if (r.handler) {
+				pipes.push(r.handler);
+			}
 
-	// Tandai sebagai routes valid
-	Object.defineProperty(useable_routes, IS_ROUTES, {
+			return { ...r, pipes };
+		});
+		return useable_routes;
+	};
+
+	Object.defineProperty(result, IS_COMPOSE_ROUTER, {
 		value: true,
 		writable: false,
 		enumerable: false,
 	});
 
-	return useable_routes as Routes;
+	return result;
 }
-
-composeRouter((r) => {})
