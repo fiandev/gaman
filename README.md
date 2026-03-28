@@ -60,7 +60,7 @@ bun create gaman@latest
 
 GamanJS embraces the **Feature-Based Modularity** philosophy. This structure is designed to keep applications clean, easy to test, and scalable as your business expands.
 
-### Arsitektur Proyek Enterprise
+### Enterprise Project Architecture
 In a production scale or **Enterprise** project, the GamanJS folder structure will look like this:
 ```
 src/
