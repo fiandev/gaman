@@ -178,15 +178,11 @@ export class Gaman {
 				const res = await this.dispatch(ctx, this.globalMiddlewares);
 				return await this.handleResponse(res, ctx);
 			} catch (error: any) {
-				try {
-					if (this.globalExceptionHandler) {
-						const errorRes = await this.globalExceptionHandler(error, ctx);
-						return await this.handleResponse(errorRes, ctx);
-					}
-				} catch (criticalError) {
-					console.error('§c[GamanJS] Critical Error in Exception Handler:§r', criticalError);
+				if (this.globalExceptionHandler) {
+					const errorRes = await this.globalExceptionHandler(error, ctx);
+					return await this.handleResponse(errorRes, ctx);
 				}
-				
+
 				throw error;
 			}
 
