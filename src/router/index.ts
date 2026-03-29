@@ -80,7 +80,10 @@ export function Router(
 		getRoutes: () => routes,
 
 		mountRouter(pathPrefix, router) {
-			const subRoutes = router(pathPrefix, currentServices);
+			const subRoutes = router(
+				normalizePath(`${prefix}/${pathPrefix}`),
+				currentServices,
+			);
 			routes.push(...subRoutes);
 			return this;
 		},
