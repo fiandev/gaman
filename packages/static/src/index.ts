@@ -103,7 +103,6 @@ export const StaticServe = (
   const cacheControl = options.cacheControl;
 
   const publicDir = resolve(process.cwd(), options.publicPath || 'public');
-  console.log(publicDir)
 
   return composeMiddleware(async (ctx, next) => {
     let reqPath = ctx.path;
