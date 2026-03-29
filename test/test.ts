@@ -35,7 +35,7 @@ defineBootstrap((app) => {
 		}),
 	);
 	app.mount(Cors());
-	app.mount(routes('/api'));
+	app.mount(routes);
 	app.mountServer({
 		http: {
 			port: 3431,
