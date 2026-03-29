@@ -1,4 +1,4 @@
-import { IS_COMPOSE_ROUTER } from '../../contants';
+import { IS_COMPOSE_ROUTER, IS_ROUTES } from '../../contants';
 import type { MiddlewareHandler } from '../middleware';
 import { Router } from '../../router';
 import type { RequestHandler, RouterBuilder, Routes } from '../../types';
@@ -30,6 +30,12 @@ export function composeRouter(callback: (r: RouterBuilder) => void): Router {
 			}
 
 			return { ...r, pipes };
+		});
+
+		Object.defineProperty(useable_routes, IS_ROUTES, {
+			value: true,
+			writable: false,
+			enumerable: false,
 		});
 		return useable_routes;
 	};

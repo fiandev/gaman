@@ -1,6 +1,12 @@
 import './global';
 
-import { isExceptionHandler, isGamanResponseBuilder, isMiddlewareHandler, isComposeRouter } from './utils/is';
+import {
+	isExceptionHandler,
+	isGamanResponseBuilder,
+	isMiddlewareHandler,
+	isComposeRouter,
+	isRoutes,
+} from './utils/is';
 import { createContext } from './context';
 import { Logger } from './utils/logger';
 import { Michi } from '@gaman/michi';
@@ -12,7 +18,11 @@ import type {
 	RouteMetadata,
 	Routes,
 } from './types';
-import type { ExceptionHandler, MiddlewareHandler, Router } from './compose/index';
+import type {
+	ExceptionHandler,
+	MiddlewareHandler,
+	Router,
+} from './compose/index';
 import { buildResponse } from './responder';
 import { TextFormat } from './utils/textformat';
 
@@ -20,7 +30,6 @@ export class Gaman {
 	private michi = new Michi<RouteMetadata>();
 	private globalMiddlewares: MiddlewareHandler[] = [];
 	private globalExceptionHandler: ExceptionHandler | null = null;
-
 
 	/**
 	 * @ID
@@ -31,19 +40,15 @@ export class Gaman {
 	 * @param ctx
 	 * @returns
 	 */
-	private async handleResponse(
-		result: any,
-		ctx: Context
-
-	): Promise<Response> {
+	private async handleResponse(result: any, ctx: Context): Promise<Response> {
 		let finalResponse: Response;
 		if (result instanceof Response) {
 			finalResponse = result;
 		} else if (isGamanResponseBuilder(result)) {
-			finalResponse = result.ok()
+			finalResponse = result.ok();
 		} else if (result === undefined) {
 			finalResponse = new Response(undefined, {
-				status: 404
+				status: 404,
 			});
 		} else {
 			finalResponse = buildResponse(result).ok();
@@ -59,8 +64,6 @@ export class Gaman {
 					);
 				}
 			}
-
-
 		}
 		const cookieHeaders = ctx.cookies.toSetCookieHeaders();
 		for (const cookieStr of cookieHeaders) {
@@ -70,9 +73,6 @@ export class Gaman {
 		return finalResponse;
 
 		// try {
-
-
-
 
 		// 	finalResponse.headers.set('X-Powered-By', 'GamanJS');
 
@@ -115,7 +115,7 @@ export class Gaman {
 
 	private async dispatch(ctx: Context, pipeline: any[]): Promise<Response> {
 		let idx = 0;
-		let handlers: Array<MiddlewareHandler> | Array<RequestHandler> = pipeline;;
+		let handlers: Array<MiddlewareHandler> | Array<RequestHandler> = pipeline;
 		let hasFindedRouter = false;
 		let routeExceptionHandler: ExceptionHandler | null = null;
 		const next = async () => {
@@ -142,7 +142,8 @@ export class Gaman {
 				if (!fn) return new Response(undefined, { status: 404 });
 				return await fn(ctx, next);
 			} catch (error) {
-				if (routeExceptionHandler) return await routeExceptionHandler(error, ctx);
+				if (routeExceptionHandler)
+					return await routeExceptionHandler(error, ctx);
 				throw error;
 			}
 		};
@@ -185,8 +186,7 @@ export class Gaman {
 
 				throw error;
 			}
-
-		}
+		};
 		Bun.serve({
 			port,
 			hostname,
@@ -197,31 +197,35 @@ export class Gaman {
 		});
 	}
 
-
-	public mount(s: ExceptionHandler | MiddlewareHandler | Router) {
+	public mount(s: ExceptionHandler | MiddlewareHandler | Router | Routes) {
 		if (isExceptionHandler(s)) this.globalExceptionHandler = s;
 		if (isMiddlewareHandler(s)) {
 			this.globalMiddlewares.push(s);
 		}
-		if (isComposeRouter(s)) {
-			// * register ke michi
-			for (const rot of s()) {
-				for (const method of rot.methods) {
-					if (rot.handler !== null) {
-						this.michi.add(method, rot.path, {
-							id: `${method}:${rot.path}`,
-							exceptionHandler: rot.exceptionHandler,
-							pipeline: rot.pipes,
-						});
-					}
+		// * register ke michi
+		let routes: Routes = [];
+		if (isComposeRouter(s)) routes = s();
+		if (isRoutes(s)) routes = s;
+		for (const rot of routes) {
+			for (const method of rot.methods) {
+				if (rot.handler !== null) {
+					this.michi.add(method, rot.path, {
+						id: `${method}:${rot.path}`,
+						exceptionHandler: rot.exceptionHandler,
+						pipeline: rot.pipes,
+					});
 				}
 			}
 		}
 	}
 
 	public mountServer(config?: GamanServerConfig) {
-		Logger.log(`${TextFormat.BOLD}${TextFormat.LIGHT_PURPLE}GamanJS Framework v2`);
-		Logger.info(`${TextFormat.ITALIC}The Universal Transport Layer for Your Logic.`);
+		Logger.log(
+			`${TextFormat.BOLD}${TextFormat.LIGHT_PURPLE}GamanJS Framework v2`,
+		);
+		Logger.info(
+			`${TextFormat.ITALIC}The Universal Transport Layer for Your Logic.`,
+		);
 		Logger.log(`${TextFormat.GRAY} —————————————————————————————————————— `);
 
 		if (typeof config?.http !== 'undefined') {
@@ -233,7 +237,9 @@ export class Gaman {
 			const host = h.host || 'localhost';
 			const port = h.port || 3431;
 
-			Logger.info(`${TextFormat.LIGHT_BLUE}HTTP${TextFormat.RESET}  : Listening at ${TextFormat.LIGHT_GREEN}http://${host}:${port}`);
+			Logger.info(
+				`${TextFormat.LIGHT_BLUE}HTTP${TextFormat.RESET}  : Listening at ${TextFormat.LIGHT_GREEN}http://${host}:${port}`,
+			);
 			this.listenHttp(config.http);
 		}
 		// this.listenIPC();
