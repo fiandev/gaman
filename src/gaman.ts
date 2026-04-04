@@ -6,6 +6,7 @@ import {
 	isMiddlewareHandler,
 	isComposeRouter,
 	isRoutes,
+	isResponseView,
 } from './utils/is';
 import { createContext } from './context';
 import { Logger } from './utils/logger';
@@ -46,6 +47,16 @@ export class Gaman {
 			finalResponse = result;
 		} else if (isGamanResponseBuilder(result)) {
 			finalResponse = result.ok();
+			if (isResponseView(finalResponse)) {
+				Logger.warn(
+					`${TextFormat.RED}View response detected, but no View Engine is registered. ` +
+						`Please install and configure a view engine like @gaman/ejs, @gaman/nunjucks, @gaman/edge, or @gaman/vite to handle ".render()".`,
+				);
+
+				finalResponse = new Response(undefined, {
+					status: 404,
+				});
+			}
 		} else if (result === undefined) {
 			finalResponse = new Response(undefined, {
 				status: 404,
@@ -197,7 +208,15 @@ export class Gaman {
 		});
 	}
 
-	public mount(s: ExceptionHandler | MiddlewareHandler | Router | Routes) {
+	public async mount(
+		s:
+			| ExceptionHandler
+			| MiddlewareHandler
+			| Router
+			| Routes
+			| Promise<ExceptionHandler | MiddlewareHandler | Router | Routes>,
+	) {
+		if (s instanceof Promise) s = await s;
 		if (isExceptionHandler(s)) this.globalExceptionHandler = s;
 		if (isMiddlewareHandler(s)) {
 			this.globalMiddlewares.push(s);

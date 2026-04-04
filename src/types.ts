@@ -228,6 +228,15 @@ export type Context = {
 	json: <T = any>() => Promise<T>;
 
 	/**
+	 * Renders a template with the provided data and returns a GamanResponseBuilder.
+	 *
+	 * @param template - The name or path of the template to render.
+	 * @param data - An optional object containing data to be passed to the template.
+	 * @returns A GamanResponseBuilder that can be further customized before sending.
+	 */
+	render(template: string, data?: Record<string, any>): GamanResponseBuilder;
+
+	/**
 	 * Send a response to the client.
 	 * @param data The data to send.
 	 * @param status The status code (default: 200).
@@ -236,43 +245,49 @@ export type Context = {
 	send: (data?: any, status?: number) => GamanResponseBuilder;
 };
 
+export interface GamanResponseView {
+	template: string;
+	data?: Record<string, any>;
+	status?: number;
+}
+
 /**
  * Fluent interface to finalize and return a Fetch Response.
  * Documentation: https://developer.mozilla.org/en-US/docs/Web/API/Response
  */
-export interface GamanResponseBuilder {
+export interface GamanResponseBuilder<T = Response> {
 	/** 200 OK - Standard success */
-	ok(): Response;
+	ok(): T;
 	/** 201 Created - Resource successfully created */
-	created(): Response;
+	created(): T;
 	/** 202 Accepted - Request received but still processing */
-	accepted(): Response;
+	accepted(): T;
 	/** 204 No Content - Success with no body */
-	noContent(): Response;
+	noContent(): T;
 	/** 400 Bad Request - Client side error */
-	badRequest(message?: string): Response;
+	badRequest(message?: string): T;
 	/** 401 Unauthorized - Authentication required */
-	unauthorized(message?: string): Response;
+	unauthorized(message?: string): T;
 	/** 403 Forbidden - Authenticated but no permission */
-	forbidden(message?: string): Response;
+	forbidden(message?: string): T;
 	/** 404 Not Found - Resource does not exist */
-	notFound(message?: string): Response;
+	notFound(message?: string): T;
 	/** 409 Conflict - Resource already exists or conflict state */
-	conflict(message?: string): Response;
+	conflict(message?: string): T;
 	/** 422 Unprocessable Entity - Validation errors */
-	unprocessable(errors?: any, message?: string): Response;
+	unprocessable(errors?: any, message?: string): T;
 	/** 429 Too Many Requests - Rate limiting */
-	tooManyRequests(message?: string): Response;
+	tooManyRequests(message?: string): T;
 	/** 500 Internal Server Error - Panic/Crash */
-	error(message?: string): Response;
+	error(message?: string): T;
 	/** 304 Not Modified */
-	notModified(): Response;
+	notModified(): T;
 	/**
 	 * Build a custom response with the specified status code and body.
 	 * @param status The HTTP status code (default: 200).
 	 * @returns A Response object.
 	 */
-	build(status: number): Response;
+	build(status: number): T;
 }
 
 /* -------------------------------------------------------------------------- */
