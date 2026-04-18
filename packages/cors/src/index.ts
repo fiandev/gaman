@@ -5,6 +5,7 @@
  */
 
 import { composeMiddleware, type MiddlewareHandler } from 'gaman/compose';
+import { Res } from 'gaman/responder';
 /**
  * CORS middleware options.
  */
@@ -84,7 +85,7 @@ export const Cors = (options?: CorsOptions): MiddlewareHandler => {
 
 		// Handle preflight request
 		if (ctx.request.method === 'OPTIONS') {
-			return ctx.send().noContent();
+			return Res.noContent()
 		}
 
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
