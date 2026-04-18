@@ -2,7 +2,6 @@ import './global';
 
 import {
 	isExceptionHandler,
-	isGamanResponseBuilder,
 	isMiddlewareHandler,
 	isComposeRouter,
 	isRoutes,
@@ -18,14 +17,16 @@ import type {
 	RequestHandler,
 	RouteMetadata,
 	Routes,
+	NextFunction,
+	ResponseData,
 } from './types';
 import type {
 	ExceptionHandler,
 	MiddlewareHandler,
 	Router,
 } from './compose/index';
-import { buildResponse } from './responder';
 import { TextFormat } from './utils/textformat';
+import type { BodyInit } from 'bun';
 
 export class Gaman {
 	private michi = new Michi<RouteMetadata>();
@@ -41,28 +42,53 @@ export class Gaman {
 	 * @param ctx
 	 * @returns
 	 */
-	private async handleResponse(result: any, ctx: Context): Promise<Response> {
+	private async handleResponse(
+		result: ResponseData,
+		ctx: Context,
+	): Promise<Response> {
 		let finalResponse: Response;
-		if (result instanceof Response) {
+		if (typeof result === 'undefined' || result === null) {
+			finalResponse = new Response(null, { status: 204 });
+		} else if (result instanceof Response) {
 			finalResponse = result;
-		} else if (isGamanResponseBuilder(result)) {
-			finalResponse = result.ok();
-			if (isResponseView(finalResponse)) {
-				Logger.warn(
-					`${TextFormat.RED}View response detected, but no View Engine is registered. ` +
-						`Please install and configure a view engine like @gaman/ejs, @gaman/nunjucks, @gaman/edge, or @gaman/vite to handle ".render()".`,
-				);
+		} else if (isResponseView(result)) {
+			/**
+			 * ! jika ada view engine ini tidak akan di proses!
+			 */
+			Logger.warn(
+				`${TextFormat.RED}View response detected, but no View Engine is registered. ` +
+					`Please install and configure a view engine like @gaman/ejs, @gaman/nunjucks, @gaman/edge, or @gaman/vite to handle ".render()".`,
+			);
 
-				finalResponse = new Response(undefined, {
-					status: 404,
-				});
-			}
-		} else if (result === undefined) {
 			finalResponse = new Response(undefined, {
 				status: 404,
 			});
+		} else if (
+			(typeof result === 'object' || Array.isArray(result)) &&
+			result !== null &&
+			!Buffer.isBuffer(result) &&
+			!(result instanceof Blob)
+		) {
+			finalResponse = Response.json(result, { status: 200 });
+		} else if (typeof result === 'string') {
+			const trimmed = result.trim();
+			if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
+				return new Response(new TextEncoder().encode(trimmed), {
+					status: 200,
+					headers: { 'Content-Type': 'text/html' },
+				});
+			} else {
+				return new Response(new TextEncoder().encode(trimmed), {
+					status: 200,
+					headers: { 'Content-Type': 'text/plain' },
+				});
+			}
+		} else if (Buffer.isBuffer(result) || result instanceof Blob) {
+			finalResponse = new Response(result);
 		} else {
-			finalResponse = buildResponse(result).ok();
+			finalResponse = new Response(null, {
+				status: 404,
+			});
 		}
 
 		finalResponse.headers.set('X-Powered-By', 'GamanJS');
@@ -124,12 +150,12 @@ export class Gaman {
 		// return finalResponse;
 	}
 
-	private async dispatch(ctx: Context, pipeline: any[]): Promise<Response> {
+	private async dispatch(ctx: Context, pipeline: any[]): Promise<ResponseData> {
 		let idx = 0;
 		let handlers: Array<MiddlewareHandler> | Array<RequestHandler> = pipeline;
 		let hasFindedRouter = false;
 		let routeExceptionHandler: ExceptionHandler | null = null;
-		const next = async () => {
+		const next: NextFunction = async () => {
 			try {
 				let fn = handlers[idx++];
 
@@ -150,7 +176,7 @@ export class Gaman {
 					fn = handlers[idx++];
 				}
 
-				if (!fn) return new Response(undefined, { status: 404 });
+				if (typeof fn !== 'function') return new Response(undefined, { status: 404 });
 				return await fn(ctx, next);
 			} catch (error) {
 				if (routeExceptionHandler)
@@ -158,7 +184,7 @@ export class Gaman {
 				throw error;
 			}
 		};
-		return await next();
+		return next();
 	}
 
 	/**

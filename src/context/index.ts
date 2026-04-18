@@ -2,11 +2,10 @@ import * as querystring from 'node:querystring';
 import { FormData } from './formdata';
 import { scanMultipart } from '../utils/multipart-scanner';
 import { GFile } from './formdata/file';
-import { HTTP_REQUEST_METADATA, IS_GAMAN_RESPONSE_VIEW } from '../contants';
+import { HTTP_REQUEST_METADATA } from '../contants';
 import { CookieMap } from 'bun';
 import { GamanHeader } from './header';
 import type { Context } from '../types';
-import { buildResponse } from '../responder';
 
 export function createContext(req: Request, pathname: string): Context {
 	const method = req.method.toUpperCase();
@@ -112,23 +111,6 @@ export function createContext(req: Request, pathname: string): Context {
 		delete(k) {
 			delete dataSet[k];
 		},
-		render(template, data) {
-			return buildResponse(
-				Object.defineProperty(
-					{
-						template,
-						data,
-					},
-					IS_GAMAN_RESPONSE_VIEW,
-					{
-						value: true,
-						writable: false,
-						enumerable: false,
-					},
-				),
-			);
-		},
-		send: buildResponse,
 
 		// @ts-ignore
 		[HTTP_REQUEST_METADATA]: req,

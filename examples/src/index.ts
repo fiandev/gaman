@@ -19,6 +19,7 @@
 
 import { defineBootstrap } from '../../src';
 import { composeMiddleware, composeException } from '../../src/compose';
+import { Res } from '../../src/responder';
 import AppRouter from './modules/app/AppRouter';
 
 defineBootstrap(async (app) => {
@@ -33,12 +34,10 @@ defineBootstrap(async (app) => {
 	// ===== Global Exception Handler =====
 	app.mount(
 		composeException((err, ctx) => {
-			return ctx
-				.send({
+			return Res.internalServerError({
 					error: true,
 					message: err instanceof Error ? err.message : 'Unknown Error',
-				})
-				.build(500);
+				});
 		}),
 	);
 

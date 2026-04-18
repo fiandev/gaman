@@ -1,7 +1,7 @@
 {
 	"name": "gaman",
-	"description": "A Lean Framework for Heavy-Duty Enterprise Performance.",
-	"version": "2.1.2",
+	"description": "A Lean Framework for Enterprise Scalability.",
+	"version": "2.1.3",
 	"author": {
 		"name": "Angga7Togk",
 		"url": "https://github.com/angga7togk"
@@ -75,10 +75,17 @@
 	},
 	"devDependencies": {
 		"@types/bun": "latest",
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^6.0.1",
+		"edge.js": "^6.5.0",
 		"esbuild-fix-imports-plugin": "^1.0.23",
 		"prettier": "^3.8.1",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4",
 		"tsup": "^8.5.1",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"vite": "^8.0.3"
 	},
 	"peerDependencies": {
 		"@gaman/michi": "^0.1.3"

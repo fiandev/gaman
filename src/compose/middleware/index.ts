@@ -1,10 +1,10 @@
 import { IS_MIDDLEWARE_HANDLER } from '../../contants';
-import type { Context } from '../../types';
+import type { Context, NextFunction, ResponseData } from '../../types';
 
 export type MiddlewareHandler = (
 	ctx: Context,
-	next: () => any | Promise<any>,
-) => any | Promise<any>;
+	next: NextFunction,
+) => ResponseData | NextFunction | Promise<ResponseData | NextFunction>;
 
 export function composeMiddleware(
 	handler: MiddlewareHandler,

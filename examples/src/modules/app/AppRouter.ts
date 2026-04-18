@@ -21,6 +21,7 @@ import {
 	composeMiddleware,
 	composeException,
 } from '../../../../src/compose';
+import { Res } from '../../../../src/responder';
 import AppController from './controllers/AppController';
 import { AppService } from './services/AppService';
 
@@ -40,42 +41,38 @@ export default composeRouter((r) => {
 
 	// ===== Inline Handler: Simple Text =====
 	r.get('/ping', (ctx) => {
-		return ctx.send('pong').ok();
+		return Res.text('pong');
 	});
 
 	// ===== Inline Handler: Query Params =====
 	r.get('/search', (ctx) => {
-		return ctx
-			.send({
-				q: ctx.query.q,
-				page: ctx.query.page || '1',
-			})
-			.ok();
+		return Res.json({
+			q: ctx.query.q,
+			page: ctx.query.page || '1',
+		});
 	});
 
 	// ===== Inline Handler: JSON Body =====
 	r.post('/echo', async (ctx) => {
 		const body = await ctx.json();
-		return ctx.send({ echo: body }).ok();
+		return Res.json({ echo: body });
 	});
 
 	// ===== Inline Handler: FormData =====
 	r.post('/form', async (ctx) => {
 		const name = await ctx.input('name');
 		const age = await ctx.input('age');
-		return ctx.send({ name, age }).ok();
+		return Res.json({ name, age });
 	});
 
 	// ===== Inline Handler: File Upload =====
 	r.post('/upload', async (ctx) => {
 		const file = await ctx.file('document');
-		return ctx
-			.send({
-				fileInfo: file
-					? { filename: file.filename, size: file.size, type: file.mimeType }
-					: null,
-			})
-			.ok();
+		return Res.json({
+			fileInfo: file
+				? { filename: file.filename, size: file.size, type: file.mimeType }
+				: null,
+		});
 	});
 
 	// ===== Deliberate Error for Global Exception =====
@@ -85,7 +82,7 @@ export default composeRouter((r) => {
 
 	// ===== Route with per-route Middleware =====
 	r.get('/guarded', (ctx) => {
-		return ctx.send({ secret: 'Top Secret Data', user: ctx.get('user') }).ok();
+		return Res.json({ secret: 'Top Secret Data', user: ctx.get('user') });
 	}).middleware(
 		composeMiddleware((ctx, next) => {
 			const token = ctx.header('authorization');
@@ -93,7 +90,7 @@ export default composeRouter((r) => {
 				ctx.set('user', 'admin');
 				return next();
 			}
-			return ctx.send({ message: 'Unauthorized' }).unauthorized();
+			return Res.unauthorized({ message: 'Unauthorized' });
 		}),
 	);
 
@@ -102,20 +99,20 @@ export default composeRouter((r) => {
 		throw new Error('Risky route failed');
 	}).exception(
 		composeException((err, ctx) => {
-			return ctx.send({ caught: true, msg: err.message }).build(422);
+			return Res.badRequest({ caught: true, msg: err.message });
 		}),
 	);
 
 	// ===== Route Group with group-level Middleware & Exception =====
 	r.group('v1', (v1) => {
-		v1.get('/hello', (ctx) => ctx.send({ msg: 'Hello from v1' }).ok());
+		v1.get('/hello', (ctx) => Res.json({ msg: 'Hello from v1' }));
 		v1.get('/me', (ctx) => {
 			if (!ctx.has('auth')) throw new Error('Not authenticated');
-			return ctx.send({ user: ctx.get('auth') }).ok();
+			return Res.json({ user: ctx.get('auth') });
 		});
 		v1.post('/data', async (ctx) => {
 			const body = await ctx.json();
-			return ctx.send({ v1: true, data: body }).ok();
+			return Res.json({ v1: true, data: body });
 		});
 	})
 		.middleware(
@@ -129,7 +126,7 @@ export default composeRouter((r) => {
 		)
 		.exception(
 			composeException((err, ctx) => {
-				return ctx.send({ v1Error: true, msg: err.message }).build(403);
+				return Res.forbidden({ v1Error: true, msg: err.message });
 			}),
 		);
 });

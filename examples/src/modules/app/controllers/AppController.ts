@@ -19,6 +19,7 @@
  */
 
 import { composeController } from '../../../../../src/compose';
+import { Res } from '../../../../../src/responder';
 import { AppService } from '../services/AppService';
 
 export type Deps = {
@@ -28,19 +29,19 @@ export type Deps = {
 export default composeController(
 	({ appService }: Deps) => ({
 		HelloWorld(ctx) {
-			return ctx.send({
+			return Res.json({
 				message: appService.WelcomeMessage()
-			}).ok();
+			});
 		},
 		GetUser(ctx) {
 			const id = ctx.param('id');
 			const user = appService.GetUser(id);
-			return ctx.send(user).ok();
+			return Res.json(user);
 		},
 		CreateItem(ctx) {
 			return ctx.json().then((body: any) => {
 				const item = appService.CreateItem(body);
-				return ctx.send(item).created();
+				return Res.created(item);
 			});
 		},
 	}),

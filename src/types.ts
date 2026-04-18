@@ -5,6 +5,7 @@ import type { ControllerFactory } from './compose/controller';
 import type { MiddlewareHandler } from './compose/middleware';
 import { FormData } from './context/formdata';
 import type { ExceptionHandler, Router } from './compose';
+import type { IResponseOptions } from './responder';
 
 export type HTTPMethod =
 	| (string & {})
@@ -226,68 +227,26 @@ export type Context = {
 	 * @returns A typed JSON object.
 	 */
 	json: <T = any>() => Promise<T>;
-
-	/**
-	 * Renders a template with the provided data and returns a GamanResponseBuilder.
-	 *
-	 * @param template - The name or path of the template to render.
-	 * @param data - An optional object containing data to be passed to the template.
-	 * @returns A GamanResponseBuilder that can be further customized before sending.
-	 */
-	render(template: string, data?: Record<string, any>): GamanResponseBuilder;
-
-	/**
-	 * Send a response to the client.
-	 * @param data The data to send.
-	 * @param status The status code (default: 200).
-	 * @returns A GamanResponseBuilder for further customization.
-	 */
-	send: (data?: any, status?: number) => GamanResponseBuilder;
 };
 
-export interface GamanResponseView {
-	template: string;
-	data?: Record<string, any>;
-	status?: number;
-}
+export type ResponseData =
+	| Response
+	| ResponseView
+	| object
+	| Array<any>
+	| string
+	| Buffer
+	| ArrayBufferLike
+	| Blob
+	| undefined
+	| null;
 
-/**
- * Fluent interface to finalize and return a Fetch Response.
- * Documentation: https://developer.mozilla.org/en-US/docs/Web/API/Response
- */
-export interface GamanResponseBuilder<T = Response> {
-	/** 200 OK - Standard success */
-	ok(): T;
-	/** 201 Created - Resource successfully created */
-	created(): T;
-	/** 202 Accepted - Request received but still processing */
-	accepted(): T;
-	/** 204 No Content - Success with no body */
-	noContent(): T;
-	/** 400 Bad Request - Client side error */
-	badRequest(message?: string): T;
-	/** 401 Unauthorized - Authentication required */
-	unauthorized(message?: string): T;
-	/** 403 Forbidden - Authenticated but no permission */
-	forbidden(message?: string): T;
-	/** 404 Not Found - Resource does not exist */
-	notFound(message?: string): T;
-	/** 409 Conflict - Resource already exists or conflict state */
-	conflict(message?: string): T;
-	/** 422 Unprocessable Entity - Validation errors */
-	unprocessable(errors?: any, message?: string): T;
-	/** 429 Too Many Requests - Rate limiting */
-	tooManyRequests(message?: string): T;
-	/** 500 Internal Server Error - Panic/Crash */
-	error(message?: string): T;
-	/** 304 Not Modified */
-	notModified(): T;
-	/**
-	 * Build a custom response with the specified status code and body.
-	 * @param status The HTTP status code (default: 200).
-	 * @returns A Response object.
-	 */
-	build(status: number): T;
+export type NextFunction = () => Promise<ResponseData>;
+
+export interface ResponseView {
+	template: string;
+	data: Record<string, any>;
+	options: IResponseOptions;
 }
 
 /* -------------------------------------------------------------------------- */

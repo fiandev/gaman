@@ -24,6 +24,6 @@ describe('composeMiddleware', () => {
 
 	it('result is next in middleware', async () => {
 		const res = "Hello World";
-		expect(await middleware({} as any, () => res)).toEqual(res);
+		expect(await middleware({} as any, async () => res)).toEqual(res);
 	});
 });
