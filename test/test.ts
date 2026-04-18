@@ -4,6 +4,7 @@ import { Cors } from '../packages/cors/src';
 import { StaticServe } from '../packages/static/src';
 import AppController from './AppController';
 import { AppService } from './AppServices';
+import { Edge } from './lib/edge';
 
 const childRouter = composeRouter((r) => {
 	r.mountMiddleware((ctx, next) => {
@@ -29,6 +30,8 @@ defineBootstrap((app) => {
 	// app.mount(Cors({
 	// 	allowHeaders: ['content-type']
 	// }));
+	// app.mount(Edge())
+	
 	app.mount(
 		StaticServe({
 			publicPath: 'test/public',

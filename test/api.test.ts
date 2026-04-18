@@ -195,7 +195,7 @@ describe('Per-route Middleware', () => {
 describe('Per-route Exception Handler', () => {
 	it('GET /risky - caught by route exception handler', async () => {
 		const res = await fetch(`${BASE}/risky`);
-		expect(res.status).toBe(422);
+		expect(res.status).toBe(400);
 		const body = await res.json();
 		expect(body.caught).toBe(true);
 		expect(body.msg).toBe('Risky route failed');

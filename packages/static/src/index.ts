@@ -2,6 +2,7 @@ import { promises as fsPromises } from 'node:fs';
 import { composeMiddleware, type MiddlewareHandler } from 'gaman/compose';
 import { join, resolve } from 'node:path';
 import { detectMime } from './mime';
+import { Res } from 'gaman/responder';
 
 export interface StaticFileOptions {
   /**
@@ -178,7 +179,7 @@ export const StaticServe = (
     const etag = `"${Bun.hash(`${finalFile.size}-${finalFile.lastModified}`)}"`;
 
     if (ctx.header('if-none-match') === etag) {
-      return ctx.send().notModified();
+      return Res.notModified()
     }
 
     const contentType = detectMime(filePath, options.mimes) || 'application/octet-stream';
@@ -190,7 +191,8 @@ export const StaticServe = (
     headers.set('Vary', 'Accept-Encoding');
     headers.set('ETag', etag);
     if (cacheControl) headers.set('Cache-Control', cacheControl);
-
-    return ctx.send(finalFile).ok();
+    
+    
+    return Res.file(finalFile);
   });
 }
