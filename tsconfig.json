@@ -24,6 +24,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
+    "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
       "gaman": [
@@ -53,8 +54,8 @@
     }
   },
   "include": [
-    "src/*"
-  ],
+    "src/**/*"
+, "test/console.ts"  ],
   "exclude": [
     "**/*.test.ts",
     "tests",

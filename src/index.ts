@@ -1,3 +1,4 @@
+export { Gaman } from './gaman';
 import { Gaman } from './gaman';
 
 export function defineBootstrap(fn: (app: Gaman) => void) {
@@ -5,4 +6,3 @@ export function defineBootstrap(fn: (app: Gaman) => void) {
 
 	fn(gaman);
 }
-

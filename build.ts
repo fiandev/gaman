@@ -46,7 +46,7 @@ build({
 	cjsInterop: false,
 	clean: true,
 	bundle: false,
-	external: ['michi', 'gaman', 'gaman/types', 'gaman/responder', 'gaman/compose', 'gaman/utils', 'gaman/formdata', 'gaman/header', 'gaman/enums'],
+	external: ['node:path', 'node:readline', 'michi', 'gaman', 'gaman/types', 'gaman/responder', 'gaman/compose', 'gaman/utils', 'gaman/formdata', 'gaman/header', 'gaman/enums'],
 	esbuildPlugins: [
 		fixImportsPlugin()
 	],

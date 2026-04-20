@@ -1,10 +1,10 @@
 import { composeService } from "../src/compose";
-import { RT } from "../src/types";
+import type { RT } from "../src/types";
 
 export const AppService = composeService(() => ({
   Welcome() {
     return {
-      message: "Welcome tu gaman ji es"
+      message: "Welcome to gaman ji es"
     }
   }
 }));

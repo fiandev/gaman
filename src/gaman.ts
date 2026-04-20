@@ -26,7 +26,6 @@ import type {
 	Router,
 } from './compose/index';
 import { TextFormat } from './utils/textformat';
-import type { BodyInit } from 'bun';
 
 export class Gaman {
 	private michi = new Michi<RouteMetadata>();
@@ -176,7 +175,8 @@ export class Gaman {
 					fn = handlers[idx++];
 				}
 
-				if (typeof fn !== 'function') return new Response(undefined, { status: 404 });
+				if (typeof fn !== 'function')
+					return new Response(undefined, { status: 404 });
 				return await fn(ctx, next);
 			} catch (error) {
 				if (routeExceptionHandler)
@@ -266,10 +266,10 @@ export class Gaman {
 
 	public mountServer(config?: GamanServerConfig) {
 		Logger.log(
-			`${TextFormat.BOLD}${TextFormat.LIGHT_PURPLE}GamanJS Framework v2`,
+			`${TextFormat.BOLD}${TextFormat.LIGHT_PURPLE}GamanJS Framework`,
 		);
 		Logger.info(
-			`${TextFormat.ITALIC}The Universal Transport Layer for Your Logic.`,
+			`${TextFormat.ITALIC}A Lean Framework for Enterprise Scalability.`,
 		);
 		Logger.log(`${TextFormat.GRAY} —————————————————————————————————————— `);
 
@@ -285,6 +285,19 @@ export class Gaman {
 			Logger.info(
 				`${TextFormat.LIGHT_BLUE}HTTP${TextFormat.RESET}  : Listening at ${TextFormat.LIGHT_GREEN}http://${host}:${port}`,
 			);
+
+			const defaultFetch = fetch;
+			// @ts-ignore
+			globalThis.fetch = (input, init) => {
+				const baseUrl = 'http://localhost:' + port;
+
+				if (typeof input === 'string' && !input.startsWith('http')) {
+					const formattedPath = input.startsWith('/') ? input : `/${input}`;
+					input = `${baseUrl}${formattedPath}`;
+				}
+				return defaultFetch(input, init);
+			};
+
 			this.listenHttp(config.http);
 		}
 		// this.listenIPC();

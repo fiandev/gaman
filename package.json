@@ -71,7 +71,8 @@
 		"framework"
 	],
 	"scripts": {
-		"release": "bun build.ts && bun test && npm publish --access public"
+		"release": "bun build.ts && bun test && npm publish --access public",
+		"kame": "bun packages/kame/src/index.ts"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",

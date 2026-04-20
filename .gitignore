@@ -1,6 +1,9 @@
 # dependencies (bun install)
 node_modules
 
+# test folders
+src/modules
+
 # output
 out
 dist
