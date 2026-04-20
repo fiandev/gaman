@@ -21,9 +21,9 @@ export const Logger = {
 		const time = Logger.getShortTime();
 
 		const colorPrefix: Record<typeof type, string> = {
-			info: TextFormat.GREEN + '[INFO~]',
+			info: TextFormat.GREEN + '[INFO]',
 			debug: TextFormat.CYAN + '[DEBUG]',
-			warn: TextFormat.YELLOW + '[WARN~]',
+			warn: TextFormat.YELLOW + '[WARN]',
 			error: TextFormat.RED + '[ERROR]',
 		};
 
@@ -34,7 +34,7 @@ export const Logger = {
 			error: TextFormat.RED,
 		};
 
-		const text = `${colorPrefix[type]} ${TextFormat.GRAY}[${time}]`;
+		const text = `${TextFormat.GRAY}${time} ${colorPrefix[type]}`;
 
 		msg = [
 			text + color[type],
@@ -76,8 +76,6 @@ export const Logger = {
 		return Logger.levels[level] <= Logger.levels[Logger.level];
 	},
 
-	setRequestId(requestId: string) { },
-
 	setRoute(route: string) { },
 
 	setStatus(status: number | null) { },
@@ -86,9 +84,9 @@ export const Logger = {
 
 	getShortTime: () => {
 		const now = new Date();
-		const date = now.toISOString().slice(0, 10); // YYYY-MM-DD
+		// const date = now.toISOString().slice(0, 10); // YYYY-MM-DD
 		const time = now.toTimeString().split(' ')[0]; // HH:MM:SS
-		return `${date} ${time}`;
+		return `${time}`;
 	},
 };
 
