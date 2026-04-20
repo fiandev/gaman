@@ -9,10 +9,7 @@ export type AppController = {
 export default composeController(({ appService }: AppController) => {
 	return {
 		async ANu(ctx) {
-      
-			return Res.render('index', {
-        message: appService.Welcome().message,
-      });
+			return Res.json({ message: 'anajy' });
 		},
 	};
 });

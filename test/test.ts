@@ -1,10 +1,11 @@
 import { composeRouter } from '../src/compose';
-import { defineBootstrap } from '../src/index';
+import { defineBootstrap, Gaman } from '../src/index';
 import { Cors } from '../packages/cors/src';
 import { StaticServe } from '../packages/static/src';
 import AppController from './AppController';
 import { AppService } from './AppServices';
-import { Edge } from './lib/edge';
+import { startKameWithGaman } from '../packages/kame/src/index';
+import './console';
 
 const childRouter = composeRouter((r) => {
 	r.mountMiddleware((ctx, next) => {
@@ -26,26 +27,21 @@ const routes = composeRouter((r) => {
 	r.get('/', [AppController, 'ANu']);
 });
 
-defineBootstrap((app) => {
-	// app.mount(Cors({
-	// 	allowHeaders: ['content-type']
-	// }));
-	// app.mount(Edge())
-	
-	app.mount(
-		StaticServe({
-			publicPath: 'test/public',
-		}),
-	);
-	app.mount(Cors());
-	app.mount(routes);
-	app.mountServer({
-		http: {
-			port: 3431,
-		},
-	});
-});
+const app = new Gaman();
 
+app.mount(
+	StaticServe({
+		publicPath: 'test/public',
+	}),
+);
+app.mount(Cors());
+app.mount(routes);
+app.mountServer({
+	http: {
+		port: 3431,
+	},
+});
+startKameWithGaman(app);
 // client
 // Bun.connect({
 // 	unix: '/tmp/gaman.sock',
