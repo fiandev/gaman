@@ -1,58 +1,40 @@
 {
-  "compilerOptions": {
-    "preserveSymlinks": true,
-    "target": "ES2021",
-    "lib": [
-      "ESNext"
-    ],
-    "module": "ES2022",
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "declaration": true,
-    "emitDeclarationOnly": true,
-    "paths": {
-      "gaman": [
-        "./src/index.ts"
-      ],
-      "gaman/types": [
-        "./src/types.ts"
-      ],
-      "gaman/responder": [
-        "./src/responder.ts"
-      ],
-      "gaman/compose": [
-        "./src/compose/index.ts"
-      ],
-      "gaman/utils": [
-        "./src/utils/index.ts"
-      ],
-      "gaman/formdata": [
-        "./src/context/formdata/index.ts"
-      ],
-      "gaman/header": [
-        "./src/context/header/index.ts"
-      ],
-      "gaman/enums": [
-        "./src/enums/index.ts"
-      ]
-    }
-  },
-  "include": [
-    "src/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "test",
-    "example",
-    "dist",
-    "build.ts",
-    "old",
-    "src-test",
-    "**/*.test.*",
-    "benchmark",
-    "**/*.benchmark.*"
-  ]
+	"compilerOptions": {
+		"preserveSymlinks": true,
+		"target": "ES2021",
+		"lib": ["ESNext"],
+		"module": "ES2022",
+		"rootDir": "./src",
+		"outDir": "./dist",
+		"moduleResolution": "node",
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"isolatedModules": true,
+		"allowSyntheticDefaultImports": true,
+		"paths": {
+			"gaman": ["./src/index.ts"],
+			"gaman/types": ["./src/types.ts"],
+			"gaman/responder": ["./src/responder.ts"],
+			"gaman/compose": ["./src/compose/index.ts"],
+			"gaman/utils": ["./src/utils/index.ts"],
+			"gaman/formdata": ["./src/context/formdata/index.ts"],
+			"gaman/header": ["./src/context/header/index.ts"],
+			"gaman/enums": ["./src/enums/index.ts"]
+		}
+	},
+	"include": ["src/**/*"],
+	"exclude": [
+		"node_modules",
+		"test",
+		"example",
+		"dist",
+		"build.ts",
+		"old",
+		"src-test",
+		"**/*.test.*",
+		"benchmark",
+		"**/*.benchmark.*"
+	]
 }
