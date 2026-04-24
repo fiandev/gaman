@@ -15,7 +15,14 @@ import './commands/gen-exception';
 import './commands/buntest-cmd';
 import './commands/fetch';
 
-export function startKame() {
+export interface KameConfig {
+	/**
+	 * @default 'src/'
+	 */
+	srcDir?: string;
+}
+
+export function startKame(cfg: KameConfig = { srcDir: 'src' }) {
 	if (!process.env.KAME_CLI) return;
 	Logger.info(
 		`${TextFormat.BG_CYAN} ${TextFormat.BOLD}Kame ${TextFormat.RESET} System active. Type "help" for commands.`,
@@ -55,7 +62,7 @@ export function startKame() {
 				`Unknown command: "${commandName}". Run "help" to see available commands.`,
 			);
 		} else {
-			await cmd.getHandler()(args, flags);
+			await cmd.getHandler()(args, flags, cfg);
 		}
 
 		rl.prompt();
