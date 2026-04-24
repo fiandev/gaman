@@ -1,21 +1,23 @@
-import { Kysely, MysqlDialect, PostgresDialect } from 'kysely';
-import { BunSqliteDialect } from 'kysely-bun-sqlite';
-import { Database } from 'bun:sqlite';
-import type { composeSchema } from './schema';
+import { Kysely } from 'kysely';
+import type { composeSchema } from './compose/schema';
 import type { ComparisonOperatorExpression } from 'kysely';
+import { getDB } from './create-db';
+import { Where } from './where';
 
 export class Model<T extends ReturnType<typeof composeSchema>> {
-	public db: Kysely<any>;
+	/**
+	 * @ID Instance database (singleton).
+	 * @EN Singleton database instance.
+	 */
+	public db: Kysely<any> = getDB();
 
-	constructor(public schema: T) {
-		const connection = process.env.DB_CONNECTION || 'sqlite';
+	constructor(public schema: T) {}
 
-		this.db = new Kysely<any>({
-			dialect: this.getDialect(connection),
-		});
-	}
-
-		//! init table
+	//! init table
+	/**
+	 * @ID Membuat tabel berdasarkan schema jika belum ada.
+	 * @EN Creates table based on schema if it does not exist.
+	 */
 	async sync() {
 		let tableBuilder = this.db.schema
 			.createTable(this.schema.name)
@@ -23,14 +25,18 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 
 		for (const [colName, colBuilder] of Object.entries(this.schema.fields)) {
 			const { config } = colBuilder as any;
+
 			tableBuilder = tableBuilder.addColumn(colName, config.type, (cb) => {
 				let res = cb;
+
 				if (config.isPrimary) res = res.primaryKey();
 				if (config.isAutoIncrement) res = res.autoIncrement();
 				if (config.isUnique) res = res.unique();
 				if (!config.nullable) res = res.notNull();
-				if (config.defaultValue !== null)
+				if (config.defaultValue !== null) {
 					res = res.defaultTo(config.defaultValue);
+				}
+
 				return res;
 			});
 		}
@@ -38,75 +44,12 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 		return await tableBuilder.execute();
 	}
 
-	private getDialect(connection: string) {
-		const config = {
-			host: process.env.DB_HOST || '127.0.0.1',
-			port: parseInt(process.env.DB_PORT || '0'),
-			database: process.env.DB_DATABASE || 'database.sqlite',
-			user: process.env.DB_USERNAME || 'root',
-			password: process.env.DB_PASSWORD || '',
-		};
-
-		switch (connection.toLowerCase()) {
-			case 'postgres':
-			case 'pg':
-				return new PostgresDialect({
-					pool: async () => {
-						const { Pool } = await import('pg');
-						return new Pool({
-							host: config.host,
-							port: config.port || 5432,
-							database: config.database,
-							user: config.user,
-							password: config.password,
-						});
-					},
-				});
-
-			case 'mysql':
-			case 'mysql2':
-				return new MysqlDialect({
-					pool: async () => {
-						const { createPool } = await import('mysql2');
-						return createPool({
-							host: config.host,
-							port: config.port || 3306,
-							database: config.database,
-							user: config.user,
-							password: config.password,
-						});
-					},
-				});
-
-			case 'sqlite':
-			default:
-				return new BunSqliteDialect({
-					database: new Database(config.database),
-				});
-		}
-	}
-
-	async find(id: number | string) {
-		return await this.db
-			.selectFrom(this.schema.name)
-			.selectAll()
-			.where('id', '=', id as any)
-			.executeTakeFirst();
-	}
-
-	async where(
-		column: keyof T['infer'],
-		op: ComparisonOperatorExpression,
-		value: any,
-	) {
-		return this.db.selectFrom(this.schema.name).where(column as any, op, value);
-	}
-
-	async create(data: Partial<T['infer']>) {
-		return await this.db
-			.insertInto(this.schema.name)
-			.values(data as any)
-			.executeTakeFirstOrThrow();
+	/**
+	 * @ID Base query builder untuk tabel ini.
+	 * @EN Base query builder for this table.
+	 */
+	query() {
+		return this.db.selectFrom(this.schema.name);
 	}
 
 	/**
@@ -114,19 +57,81 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @EN Fetches all records from the table.
 	 */
 	async all(): Promise<Array<T['infer']>> {
-		return await this.db.selectFrom(this.schema.name).selectAll().execute();
+		return await this.query().selectAll().execute();
+	}
+
+	/**
+	 * @ID Mencari banyak data berdasarkan ID (array).
+	 * @EN Finds multiple records by ID (returns array).
+	 */
+	async find(id: number | string): Promise<Array<T['infer']>> {
+		return await this.query()
+			.selectAll()
+			.where('id' as any, '=', id as any)
+			.execute();
 	}
 
 	/**
 	 * @ID Mencari satu rekaman berdasarkan nama kolom dan nilai tertentu.
-	 * @EN Finds a single record by a specific column and value.
+	 * @EN Finds multiple record by a specific column and value.
 	 */
-	async findBy(column: keyof T['infer'], value: any): Promise<T['infer']> {
-		return await this.db
-			.selectFrom(this.schema.name)
+	async findBy(
+		column: keyof T['infer'],
+		value: any,
+	): Promise<Array<T['infer']>> {
+		return await this.query()
 			.selectAll()
 			.where(column as any, '=', value)
-			.executeTakeFirst() as any;
+			.execute();
+	}
+
+	/**
+	 * @ID Mencari satu data berdasarkan ID.
+	 * @EN Finds a single record by ID.
+	 */
+	async findOne(id: number | string): Promise<T['infer'] | undefined> {
+		return await this.query()
+			.selectAll()
+			.where('id' as any, '=', id as any)
+			.executeTakeFirst();
+	}
+
+	/**
+	 * @ID Mencari satu data berdasarkan kolom.
+	 * @EN Finds a single record by column.
+	 */
+	async findOneBy(
+		column: keyof T['infer'],
+		value: any,
+	): Promise<T['infer'] | undefined> {
+		return await this.query()
+			.selectAll()
+			.where(column as any, '=', value)
+			.executeTakeFirst();
+	}
+
+	/**
+	 * @ID Query filter berbasis kondisi (return query builder).
+	 * @EN Conditional query filter (returns query builder).
+	 */
+	where(
+		column: keyof T['infer'],
+		op: ComparisonOperatorExpression,
+		value: any,
+	) {
+		const qb = this.query().where(column as any, op, value);
+		return new Where<T['infer']>(qb as any);
+	}
+
+	/**
+	 * @ID Membuat data baru ke tabel.
+	 * @EN Inserts new record into table.
+	 */
+	async create(data: Partial<T['infer']>) {
+		return await this.db
+			.insertInto(this.schema.name)
+			.values(data as any)
+			.executeTakeFirstOrThrow();
 	}
 
 	/**
@@ -138,7 +143,7 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 			.updateTable(this.schema.name)
 			.set(data as any)
 			.where('id' as any, '=', id as any)
-			.execute();
+			.execute();	
 	}
 
 	/**
@@ -157,8 +162,7 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @EN Counts the total number of records in the table.
 	 */
 	async count() {
-		const result = await this.db
-			.selectFrom(this.schema.name)
+		const result = await this.query()
 			.select((eb: any) => eb.fn.countAll().as('total'))
 			.executeTakeFirst();
 
@@ -170,8 +174,7 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @EN Retrieves the latest record ordered by a specific column.
 	 */
 	async latest(column: keyof T['infer'] = 'created_at' as any) {
-		return await this.db
-			.selectFrom(this.schema.name)
+		return await this.query()
 			.selectAll()
 			.orderBy(column as any, 'desc')
 			.executeTakeFirst();
@@ -185,12 +188,7 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 		const offset = (page - 1) * limit;
 
 		const [data, total] = await Promise.all([
-			this.db
-				.selectFrom(this.schema.name)
-				.selectAll()
-				.limit(limit)
-				.offset(offset)
-				.execute(),
+			this.query().selectAll().limit(limit).offset(offset).execute(),
 			this.count(),
 		]);
 
@@ -203,14 +201,6 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 				lastPage: Math.ceil(total / limit),
 			},
 		};
-	}
-
-	/**
-	 * @ID Mengembalikan instance query builder Kysely untuk kueri kustom.
-	 * @EN Returns the Kysely query builder instance for custom queries.
-	 */
-	query() {
-		return this.db.selectFrom(this.schema.name);
 	}
 
 	/**
