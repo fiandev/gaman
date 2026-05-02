@@ -3,9 +3,10 @@ import { MigrationTableBuilder } from './migration-column-builder';
 import type { composeSchema } from '../compose';
 import { SchemaColumnBuilder } from '../column/schema-column-builder';
 import type { ColumnDefinition } from '../column/defintion-column';
+import { getDB } from '../create-db';
 
 export class MigrationBuilder {
-	constructor(private kysely: Kysely<any>) {}
+	private kysely = getDB();
 
 	/**
 	 * CREATE TABLE
@@ -86,6 +87,7 @@ export class MigrationBuilder {
 					if (colDefintion.isUnique) res = res.unique();
 					if (!colDefintion.isNullable) res = res.notNull();
 					if (
+						colDefintion.defaultValue !== undefined &&
 						colDefintion.defaultValue !== null &&
 						typeof colDefintion.defaultValue !== 'function'
 					) {
