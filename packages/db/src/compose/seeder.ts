@@ -1,5 +1,5 @@
 export type SeederHandler = () => Promise<void> | void;
 
-export function composeSeeder(seederName: string, handler: SeederHandler) {
+export function composeSeeder( handler: SeederHandler) {
 	return handler;
 }

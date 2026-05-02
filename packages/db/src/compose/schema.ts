@@ -1,16 +1,17 @@
-import { column, ColumnBuilder } from '../column-builder';
+import type { ColumnDefinition } from '../column/defintion-column';
+import { SchemaColumnBuilder } from '../column/schema-column-builder';
 import { RelationBuilder } from '../relation-builder';
 
-export type SchemaDefinition = Record<string, ColumnBuilder>;
+export type SchemaDefinition = Record<string, ColumnDefinition>;
 
 export function composeSchema<T extends SchemaDefinition>(
 	name: string,
-	fields: (c: typeof column) => T,
+	fields: (c: SchemaColumnBuilder) => T,
 	relations?: (r: RelationBuilder<T['infer']>) => any,
 ) {
 	return {
 		name,
-		fields: fields(column),
+		fields: fields(new SchemaColumnBuilder()),
 		relations: relations?.(new RelationBuilder<T['infer']>(name)),
 		//! Magic: Mengambil tipe data asli dari tiap ColumnBuilder
 		infer: {} as {
