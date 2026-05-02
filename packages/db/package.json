@@ -9,6 +9,16 @@
 			"types": "./dist/index.d.ts",
 			"require": "./dist/index.js",
 			"import": "./dist/index.mjs"
+		},
+		"./column": {
+			"types": "./dist/column/index.d.ts",
+			"require": "./dist/column/index.js",
+			"import": "./dist/column/index.mjs"
+		},
+		"./migration": {
+			"types": "./dist/migration/index.d.ts",
+			"require": "./dist/migration/index.js",
+			"import": "./dist/migration/index.mjs"
 		}
 	},
 	"keywords": [
@@ -17,6 +27,7 @@
 		"database",
 		"gaman db",
 		"orm",
+		"gaman orm",
 		"bun"
 	],
 	"repository": {

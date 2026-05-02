@@ -1,10 +1,10 @@
-// src/database/db.ts
 import { Kysely, MysqlDialect, PostgresDialect } from 'kysely';
 import { BunSqliteDialect } from 'kysely-bun-sqlite';
 import { Database } from 'bun:sqlite';
 
 let db: Kysely<any> | null = null;
 
+//! SINGLETON CONNECTION
 export function getDB() {
 	if (db) return db;
 
