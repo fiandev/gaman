@@ -9,7 +9,7 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @ID Instance database (singleton).
 	 * @EN Singleton database instance.
 	 */
-	public db: Kysely<any> = getDB();
+	public kysely: Kysely<any> = getDB();
 
 	constructor(public schema: T) {}
 
@@ -19,29 +19,58 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @EN Creates table based on schema if it does not exist.
 	 */
 	async sync() {
-		let tableBuilder = this.db.schema
+		let tableBuilder = this.kysely.schema
 			.createTable(this.schema.name)
 			.ifNotExists();
 
-		for (const [colName, colBuilder] of Object.entries(this.schema.fields)) {
-			const { config } = colBuilder as any;
+		const indexes: string[] = [];
 
-			tableBuilder = tableBuilder.addColumn(colName, config.type, (cb) => {
-				let res = cb;
+		for (const [colName, colDefintion] of Object.entries(this.schema.fields)) {
+			if (!colDefintion.type) {
+				throw new Error(`Column "${colName}" has no type defined`);
+			}
 
-				if (config.isPrimary) res = res.primaryKey();
-				if (config.isAutoIncrement) res = res.autoIncrement();
-				if (config.isUnique) res = res.unique();
-				if (!config.nullable) res = res.notNull();
-				if (config.defaultValue !== null) {
-					res = res.defaultTo(config.defaultValue);
-				}
+			tableBuilder = tableBuilder.addColumn(
+				colName,
+				colDefintion.type,
+				(cb) => {
+					let res = cb;
 
-				return res;
-			});
+					if (colDefintion.isPrimary) res = res.primaryKey();
+					if (colDefintion.isAutoIncrement) res = res.autoIncrement();
+					if (colDefintion.isUnsigned) res = res.unsigned();
+					if (colDefintion.isUnique) res = res.unique();
+					if (!colDefintion.isNullable) res = res.notNull();
+					if (
+						colDefintion.defaultValue !== null &&
+						typeof colDefintion.defaultValue !== 'function'
+					) {
+						res = res.defaultTo(colDefintion.defaultValue);
+					}
+
+					return res;
+				},
+			);
+
+			//? simpan index untuk dibuat nanti
+			if (colDefintion.isIndex) {
+				indexes.push(colName);
+			}
 		}
 
-		return await tableBuilder.execute();
+		const result = await tableBuilder.execute();
+
+		// buat index setelah table dibuat
+		for (const colName of indexes) {
+			await this.kysely.schema
+				.createIndex(`${this.schema.name}_${colName}_idx`)
+				.ifNotExists()
+				.on(this.schema.name)
+				.column(colName)
+				.execute();
+		}
+
+		return result;
 	}
 
 	/**
@@ -49,7 +78,7 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @EN Base query builder for this table.
 	 */
 	query() {
-		return this.db.selectFrom(this.schema.name);
+		return this.kysely.selectFrom(this.schema.name);
 	}
 
 	/**
@@ -61,24 +90,10 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	}
 
 	/**
-	 * @ID Mencari banyak data berdasarkan ID (array).
-	 * @EN Finds multiple records by ID (returns array).
-	 */
-	async find(id: number | string): Promise<Array<T['infer']>> {
-		return await this.query()
-			.selectAll()
-			.where('id' as any, '=', id as any)
-			.execute();
-	}
-
-	/**
 	 * @ID Mencari satu rekaman berdasarkan nama kolom dan nilai tertentu.
 	 * @EN Finds multiple record by a specific column and value.
 	 */
-	async findBy(
-		column: keyof T['infer'],
-		value: any,
-	): Promise<Array<T['infer']>> {
+	async find(column: keyof T['infer'], value: any): Promise<Array<T['infer']>> {
 		return await this.query()
 			.selectAll()
 			.where(column as any, '=', value)
@@ -86,21 +101,10 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	}
 
 	/**
-	 * @ID Mencari satu data berdasarkan ID.
-	 * @EN Finds a single record by ID.
-	 */
-	async findOne(id: number | string): Promise<T['infer'] | undefined> {
-		return await this.query()
-			.selectAll()
-			.where('id' as any, '=', id as any)
-			.executeTakeFirst();
-	}
-
-	/**
 	 * @ID Mencari satu data berdasarkan kolom.
 	 * @EN Finds a single record by column.
 	 */
-	async findOneBy(
+	async findOne(
 		column: keyof T['infer'],
 		value: any,
 	): Promise<T['infer'] | undefined> {
@@ -128,9 +132,23 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @EN Inserts new record into table.
 	 */
 	async create(data: Partial<T['infer']>) {
-		return await this.db
+		const finalData: any = { ...data };
+
+		for (const [key, col] of Object.entries(this.schema.fields)) {
+			const config = (col as any).config;
+
+			if (finalData[key] === undefined && config.defaultValue !== null) {
+				if (typeof config.defaultValue === 'function') {
+					finalData[key] = config.defaultValue();
+				} else {
+					finalData[key] = config.defaultValue;
+				}
+			}
+		}
+
+		return await this.kysely
 			.insertInto(this.schema.name)
-			.values(data as any)
+			.values(finalData)
 			.executeTakeFirstOrThrow();
 	}
 
@@ -139,11 +157,11 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @EN Updates a record based on its unique ID.
 	 */
 	async update(id: number | string, data: Partial<T['infer']>) {
-		return await this.db
+		return await this.kysely
 			.updateTable(this.schema.name)
 			.set(data as any)
 			.where('id' as any, '=', id as any)
-			.execute();	
+			.execute();
 	}
 
 	/**
@@ -151,7 +169,7 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @EN Deletes a record based on its unique ID.
 	 */
 	async delete(id: number | string) {
-		return await this.db
+		return await this.kysely
 			.deleteFrom(this.schema.name)
 			.where('id' as any, '=', id as any)
 			.execute();
@@ -208,7 +226,7 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @EN Returns the raw Kysely instance for low-level database access.
 	 */
 	getRaw() {
-		return this.db;
+		return this.kysely;
 	}
 
 	/**
@@ -216,6 +234,6 @@ export class Model<T extends ReturnType<typeof composeSchema>> {
 	 * @EN Deletes all data within the table (clears the table).
 	 */
 	async truncate() {
-		return await this.db.deleteFrom(this.schema.name).execute();
+		return await this.kysely.deleteFrom(this.schema.name).execute();
 	}
 }
